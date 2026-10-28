@@ -1,0 +1,144 @@
+.TH SPACE-NERDS-IN-SPACE "6" "October 2026" "snis_web_gateway" "Games"
+.SH NAME
+snis_web_gateway \- HTTP/HTTPS server and WebSocket-to-TCP relay for the Space Nerds In Space web client
+.SH SYNOPSIS
+.B snis_web_gateway
+[
+.B \-p
+.I port
+] [
+.B \-r
+.I directory
+] [
+.B \-a
+.I host:port
+] [
+.B \-l
+.I lobbyhost
+] [
+.B \-c
+.I certfile
+.B \-k
+.I keyfile
+] [
+.B \-n
+] [
+.B \-v
+]
+.SH DESCRIPTION
+.warn 511
+.PP
+snis_web_gateway provides everything a web browser needs to run the browser
+build of snis_client on a single port:
+.PP
+It serves the browser client's files (by default from \fBbin/web\fR, built by
+"make WEB=1 web"), including the Cross-Origin-Opener-Policy and
+Cross-Origin-Embedder-Policy HTTP headers that browsers require before allowing
+threads (SharedArrayBuffer).
+.PP
+It relays WebSockets to TCP connections, because a browser cannot open a raw
+TCP connection directly to snis_server or ssgl_server.  When the web client
+requests \fB/relay/\fIhost\fB/\fIport\fR, the gateway connects to that host and
+port over TCP and passes bytes in both directions.  It relays only to addresses
+it has been explicitly told to allow: those specified with \fB\-\-allow\fR, the
+lobby server specified with \fB\-\-lobby\fR, and every game server listed by
+that lobby.
+.PP
+It speaks both HTTP and HTTPS on the same port, distinguishing them by
+inspecting the first byte sent by the client.  Browsers allow threads only in a
+"secure context" (such as \fBhttp://localhost\fR or an \fBhttps://\fR URL), so
+players connecting from other machines must use HTTPS.  Unless given a
+certificate and private key via \fB\-\-cert\fR and \fB\-\-key\fR (or disabled
+with \fB\-\-no\-tls\fR), the gateway automatically generates a self-signed
+certificate naming the local machine and its IPv4 addresses the first time it
+runs.
+.PP
+Nothing in snis_server, snis_multiverse, or ssgl_server needs to know about
+snis_web_gateway; to them, a browser connecting through the gateway is a client
+like any other.
+.SH OPTIONS
+.TP
+\fB\-p, \-\-port \fIport\fR
+Port to listen on for both HTTP and HTTPS connections (default 8088).
+.TP
+\fB\-r, \-\-root \fIdirectory\fR
+Document root directory to serve files from (default \fBbin/web\fR).  A request
+for \fB/\fR serves \fB/snis_client.html\fR.
+.TP
+\fB\-a, \-\-allow \fIhost:port\fR
+Allow browsers to relay connections to the snis_server at \fIhost:port\fR.
+This option may be repeated to allow multiple servers.
+.TP
+\fB\-l, \-\-lobby \fIhost\fR
+Allow browsers to relay connections to the ssgl_server lobby at \fIhost\fR
+(with an optional \fI:port\fR suffix) and to every SNIS game server listed by
+that lobby.  The gateway polls the lobby every 5 seconds to keep its allowlist
+updated.
+.TP
+\fB\-c, \-\-cert \fIfile\fR
+Use the PEM certificate chain in \fIfile\fR for HTTPS instead of generating or
+using the default self-signed certificate.  Must be used together with
+\fB\-\-key\fR.
+.TP
+\fB\-k, \-\-key \fIfile\fR
+Use the PEM private key in \fIfile\fR for HTTPS.  Must be used together with
+\fB\-\-cert\fR.
+.TP
+\fB\-n, \-\-no\-tls\fR
+Serve HTTP only and do not set up TLS/HTTPS.  This is sufficient when the
+browser is running on the same machine as the gateway (\fBhttp://localhost\fR).
+.TP
+\fB\-v, \-\-verbose\fR
+Print additional diagnostic messages to standard error, including allowed relay
+addresses, HTTP requests, and TLS handshake failures.
+.TP
+\fB\-h, \-\-help\fR
+Print a usage message and exit.
+.SH EXAMPLES
+.PP
+For a bare snis_server started without a lobby on port 2501:
+.nf
+
+	snis_server --nolobby --port 2501 -L x
+	snis_web_gateway --allow localhost:2501
+.fi
+.PP
+Then open \fBhttp://localhost:8088/\fR on the same machine, or
+\fBhttps://<hostname>:8088/\fR from another machine on the network.
+.PP
+To allow connections to a lobby server and all game servers registered with it:
+.nf
+
+	snis_web_gateway --lobby localhost
+.fi
+.SH FILES
+.TP
+\fBbin/web\fR
+Default document root directory containing \fBsnis_client.html\fR,
+\fBsnis_client.js\fR, \fBsnis_client.wasm\fR, and \fBsnis_client.data\fR.
+.TP
+\fB$XDG_DATA_HOME/space-nerds-in-space/web-gateway-cert.pem\fR,
+.TP
+\fB$HOME/.local/share/space-nerds-in-space/web-gateway-cert.pem\fR
+Default path where the auto-generated self-signed X.509 certificate is stored.
+.TP
+\fB$XDG_DATA_HOME/space-nerds-in-space/web-gateway-key.pem\fR,
+.TP
+\fB$HOME/.local/share/space-nerds-in-space/web-gateway-key.pem\fR
+Default path where the auto-generated private key is stored.  If the machine's
+IP addresses or hostname change, delete both \fB.pem\fR files so that
+snis_web_gateway generates a new certificate on its next startup.
+.SH ENVIRONMENT VARIABLES
+.TP
+\fBXDG_DATA_HOME\fR
+If set, the auto-generated certificate and private key are stored in
+\fB$XDG_DATA_HOME/space-nerds-in-space/\fR instead of
+\fB$HOME/.local/share/space-nerds-in-space/\fR.
+.TP
+\fBHOME\fR
+Used to locate \fB.local/share/space-nerds-in-space/\fR when
+\fBXDG_DATA_HOME\fR is not set.
+.SH SEE ALSO
+.PP
+snis_client(6), snis_server(6), snis_multiverse(6), ssgl_server(6)
+.br

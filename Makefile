@@ -504,7 +504,8 @@ MAN6PAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
 	ssgl/ssgl_server.6 \
 	${MANSRCDIR}/snis_multiverse.6 \
 	${MANSRCDIR}/snis_update_assets.6 \
-	${MANSRCDIR}/snis-console.6
+	${MANSRCDIR}/snis-console.6 \
+	${MANSRCDIR}/snis_web_gateway.6
 MAN1PAGES=${MANSRCDIR}/earthlike.1.gz \
 	${MANSRCDIR}/snis_test_audio.1.gz \
 	${MANSRCDIR}/lsssgl.1
