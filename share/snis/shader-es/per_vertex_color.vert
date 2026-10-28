@@ -10,5 +10,10 @@ void main()
 {
 	v_Color = a_Color;
 	gl_Position = u_MVPMatrix * a_Position;
+	/* 2D points (dotted and "electric" lines) are drawn with this shader.
+	 * OpenGL ES leaves the size of a point undefined unless the vertex
+	 * shader writes it, and some GPUs then draw nothing at all.  Desktop
+	 * GL takes it from glPointSize() instead, which defaults to 1. */
+	gl_PointSize = 1.0;
 }
 
