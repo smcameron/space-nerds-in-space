@@ -20,7 +20,7 @@
 <style>
 	html, body { margin: 0; height: 100%; background: #000; color: #8f8; overflow: hidden;
 		font-family: monospace; }
-	#canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+	#canvas { display: block; position: absolute; outline: none; }
 	#status { position: absolute; top: 40%; width: 100%; text-align: center; font-size: 18px; }
 </style>
 </head>
@@ -65,6 +65,30 @@
 		},
 	};
 	canvas.addEventListener('click', function() { canvas.focus(); });
+
+	/* The client draws at a fixed aspect ratio (its window's), as it does
+	 * natively, where the window manager keeps the window to that shape.
+	 * Here the page plays the window manager: show the canvas as large as
+	 * fits, at the shape it is drawn, centred, rather than stretched.  The
+	 * client sets the canvas's size itself, so check each frame. */
+	function fit_canvas() {
+		var w = innerWidth, h = innerHeight;
+
+		if (canvas.width > 0 && canvas.height > 0) {
+			if (w * canvas.height > h * canvas.width)
+				w = Math.round(h * canvas.width / canvas.height);
+			else
+				h = Math.round(w * canvas.height / canvas.width);
+			if (canvas.style.width != w + 'px' || canvas.style.height != h + 'px') {
+				canvas.style.width = w + 'px';
+				canvas.style.height = h + 'px';
+				canvas.style.left = Math.floor((innerWidth - w) / 2) + 'px';
+				canvas.style.top = Math.floor((innerHeight - h) / 2) + 'px';
+			}
+		}
+		requestAnimationFrame(fit_canvas);
+	}
+	requestAnimationFrame(fit_canvas);
 </script>
 <script async src="snis_client.js"></script>
 </body>
