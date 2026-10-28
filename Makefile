@@ -23,10 +23,12 @@ USE_SNIS_XWINDOWS_HACKS=0
 NET_TRANSPORT_OBJ=snis_net_transport_web.o
 MAIN_LOOP_OBJ=snis_main_loop_web.o
 ASSET_FETCH_OBJ=snis_asset_fetch_web.o
+JOYSTICK_OBJ=joystick_web.o
 else
 NET_TRANSPORT_OBJ=snis_net_transport.o
 MAIN_LOOP_OBJ=snis_main_loop.o
 ASSET_FETCH_OBJ=snis_asset_fetch.o
+JOYSTICK_OBJ=joystick.o
 endif
 
 # use "make OSX=1" for mac
@@ -639,7 +641,7 @@ SNDOBJS=$(patsubst %,$(OD)/%,${_SNDOBJS})
 
 _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
-	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
+	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o ${JOYSTICK_OBJ} \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
 	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o read_menu_file.o \
@@ -1108,6 +1110,9 @@ $(OD)/liang-barsky.o:   liang-barsky.c Makefile ${ODT}
 
 $(OD)/joystick.o:   joystick.c Makefile ${ODT}
 	$(Q)$(COMPILE)
+
+$(OD)/joystick_web.o:   joystick_web.c joystick.h Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
 
 joystick_test:	joystick.c joystick.h Makefile
 	$(CC) -g -DJOYSTICK_TEST -o joystick_test joystick.c

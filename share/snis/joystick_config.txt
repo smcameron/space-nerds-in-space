@@ -102,6 +102,33 @@ device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
    button 1 damcon-gripper
    button 0 damcon-gripper
 
+# Any gamepad in a web browser (see joystick_web.c).  Browsers present
+# most gamepads in the W3C "standard gamepad" layout: axes 0 and 1 are the
+# left stick, 2 and 3 the right stick; buttons 0-3 are the bottom, right,
+# left and top face buttons (A, B, X, Y on an Xbox controller).
+device:web-gamepad
+ mode main
+   axis 2 roll
+   axis 3 pitch
+   axis 0 yaw
+   button 3 phaser
+   button 2 torpedo
+ mode navigation
+   axis 2 roll
+   axis 3 pitch
+   axis 0 yaw
+ mode weapons
+   axis 2 weapons-yaw
+   axis 3 weapons-pitch
+   axis 0 weapons-yaw
+   button 3 phaser
+   button 2 torpedo
+ mode damcon
+   axis 2 damcon-roll
+   axis 3 damcon-pitch
+   button 1 damcon-gripper
+   button 0 damcon-gripper
+
 # Thrustmaster Throttle
 device:usb-Thrustmaster_TWCS_Throttle-joystick
  mode main

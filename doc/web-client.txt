@@ -13,9 +13,15 @@ the same native programs as always.
 
 This is new and incomplete.  What works: connecting to one snis_server
 without the lobby (as in doc/lobbyless-operation.txt), or through a lobby;
-every station, sound effects, keyboard, mouse and typing.  What does not, yet:
-voice chat; text to speech; joysticks; finding lobbies on the local network;
-the launcher.
+every station, sound effects, keyboard, mouse, typing and gamepads.  What
+does not, yet: voice chat; text to speech; finding lobbies on the local
+network; the launcher.
+
+Gamepads: a browser only reveals a gamepad after one of its buttons is
+pressed, so press one once the page has loaded.  Every gamepad appears as one
+joystick named "web-gamepad", which share/snis/joystick_config.txt maps for
+the browser's "standard gamepad" layout (most gamepads): the right stick
+steers, the left stick yaws, Y fires phasers and X torpedoes.
 
 Building
 --------
@@ -139,6 +145,7 @@ the same way USE_GLES=1 swaps graph_dev_opengl.c for graph_dev_gles.c:
 	snis_net_transport.c	-> snis_net_transport_web.c	TCP becomes WebSocket
 	snis_main_loop.c	-> snis_main_loop_web.c		the browser calls each frame
 	snis_asset_fetch.c	-> snis_asset_fetch_web.c	fetch solarsystems when needed
+	joystick.c		-> joystick_web.c		gamepads through SDL
 	(various)		-> snis_web_stubs.c		things a browser cannot do
 
 and the WebSocket goes to snis_web_gateway, at /relay/<host>/<port>.
