@@ -168,42 +168,60 @@ static void conn_close(struct conn *c)
 
 /* The allowlist */
 
-static void allow_address(struct in_addr addr, uint16_t port, int from_lobby)
+/* Add an address to the allowlist.  The caller holds allowed_lock. */
+static void allow_address_locked(struct in_addr addr, uint16_t port, int from_lobby)
 {
 	int i;
 
-	pthread_mutex_lock(&allowed_lock);
 	for (i = 0; i < nallowed; i++)
 		if (allowed[i].addr.s_addr == addr.s_addr && allowed[i].port == port)
-			goto out;
+			return;
 	if (nallowed >= MAX_ALLOWED) {
 		fprintf(stderr, "%s: too many allowed addresses\n", P);
-		goto out;
+		return;
 	}
 	allowed[nallowed].addr = addr;
 	allowed[nallowed].port = port;
 	allowed[nallowed].from_lobby = from_lobby;
 	nallowed++;
-	if (verbose) {
-		char a[INET_ADDRSTRLEN];
-
-		inet_ntop(AF_INET, &addr, a, sizeof(a));
-		fprintf(stderr, "%s: relaying to %s:%hu allowed\n", P, a, port);
-	}
-out:
-	pthread_mutex_unlock(&allowed_lock);
 }
 
-static void forget_lobby_addresses(void)
+static void allow_address(struct in_addr addr, uint16_t port, int from_lobby)
 {
-	int i, j;
+	char a[INET_ADDRSTRLEN];
+
+	pthread_mutex_lock(&allowed_lock);
+	allow_address_locked(addr, port, from_lobby);
+	pthread_mutex_unlock(&allowed_lock);
+	inet_ntop(AF_INET, &addr, a, sizeof(a));
+	fprintf(stderr, "%s: relaying to %s:%hu allowed\n", P, a, port);
+}
+
+/* Replace the addresses the lobby listed last time with those it lists now,
+ * in one step, so that a server listed both times is never refused.
+ */
+static void replace_lobby_addresses(struct ssgl_game_server *game_server, int count)
+{
+	struct in_addr addr;
+	int i, j, before, after = 0;
 
 	pthread_mutex_lock(&allowed_lock);
 	for (i = 0, j = 0; i < nallowed; i++)
 		if (!allowed[i].from_lobby)
 			allowed[j++] = allowed[i];
+	before = nallowed - j;
 	nallowed = j;
+	for (i = 0; i < count; i++) {
+		addr.s_addr = game_server[i].ipaddr;
+		allow_address_locked(addr, ntohs(game_server[i].port), 1);
+		addr.s_addr = game_server[i].real_ipaddr;
+		allow_address_locked(addr, ntohs(game_server[i].port), 1);
+	}
+	for (i = 0; i < nallowed; i++)
+		after += allowed[i].from_lobby;
 	pthread_mutex_unlock(&allowed_lock);
+	if (before != after)
+		fprintf(stderr, "%s: the lobby lists %d game server%s\n", P, count, count == 1 ? "" : "s");
 }
 
 static int address_is_allowed(struct in_addr addr, uint16_t port)
@@ -272,8 +290,7 @@ static void *lobby_thread(__attribute__((unused)) void *arg)
 {
 	struct ssgl_client_filter filter;
 	struct ssgl_game_server *game_server;
-	struct in_addr addr;
-	int sock, count, i, rc;
+	int sock, count, rc;
 
 	memset(&filter, 0, sizeof(filter));
 	snprintf(filter.game_type, sizeof(filter.game_type), "SNIS");
@@ -290,13 +307,7 @@ static void *lobby_thread(__attribute__((unused)) void *arg)
 			rc = ssgl_recv_game_servers(sock, &game_server, &count, &filter);
 			if (rc)
 				break;
-			forget_lobby_addresses();
-			for (i = 0; i < count; i++) {
-				addr.s_addr = game_server[i].ipaddr;
-				allow_address(addr, ntohs(game_server[i].port), 1);
-				addr.s_addr = game_server[i].real_ipaddr;
-				allow_address(addr, ntohs(game_server[i].port), 1);
-			}
+			replace_lobby_addresses(game_server, count);
 			free(game_server);
 			ssgl_sleep(LOBBY_POLL_SECS);
 		} while (1);
@@ -499,7 +510,7 @@ static int read_request(struct conn *c, struct request *r)
 	return 0;
 }
 
-static void send_error(struct conn *c, int code, const char *reason)
+static void send_error(struct conn *c, struct request *r, int code, const char *reason)
 {
 	conn_printf(c, "HTTP/1.1 %d %s\r\n"
 			"Content-Type: text/plain\r\n"
@@ -507,7 +518,7 @@ static void send_error(struct conn *c, int code, const char *reason)
 			"Connection: close\r\n\r\n%s\n",
 			code, reason, (int) strlen(reason) + 1, reason);
 	if (verbose)
-		fprintf(stderr, "%s: %s: %d %s\n", P, c->peer, code, reason);
+		fprintf(stderr, "%s: %s: %s %s: %d %s\n", P, c->peer, r->method, r->path, code, reason);
 }
 
 static const char *content_type(const char *path)
@@ -564,7 +575,7 @@ static void serve_file(struct conn *c, struct request *r)
 	if (strcmp(r->path, "/") == 0)
 		snprintf(r->path, sizeof(r->path), "/snis_client.html");
 	if (!path_is_safe(r->path)) {
-		send_error(c, 404, "Not Found");
+		send_error(c, r, 404, "Not Found");
 		return;
 	}
 	snprintf(path, sizeof(path), "%s%s", document_root, r->path);
@@ -572,7 +583,7 @@ static void serve_file(struct conn *c, struct request *r)
 	if (fd < 0 || fstat(fd, &statbuf) != 0 || !S_ISREG(statbuf.st_mode)) {
 		if (fd >= 0)
 			close(fd);
-		send_error(c, 404, "Not Found");
+		send_error(c, r, 404, "Not Found");
 		return;
 	}
 	gmtime_r(&statbuf.st_mtime, &tm);
@@ -756,12 +767,12 @@ static void relay_websocket(struct conn *c, struct request *r)
 	int server_fd, n;
 
 	if (r->websocket_key[0] == '\0' || strncmp(r->path, "/relay/", 7) != 0) {
-		send_error(c, 400, "Bad Request");
+		send_error(c, r, 400, "Bad Request");
 		return;
 	}
 	server_fd = connect_to_target(c, r->path);
 	if (server_fd < 0) {
-		send_error(c, 403, "Forbidden");
+		send_error(c, r, 403, "Forbidden");
 		return;
 	}
 	websocket_accept_key(r->websocket_key, accept, sizeof(accept));
@@ -837,7 +848,7 @@ static void *connection_thread(void *arg)
 	else if (strcmp(r.method, "GET") == 0 || strcmp(r.method, "HEAD") == 0)
 		serve_file(c, &r);
 	else
-		send_error(c, 405, "Method Not Allowed");
+		send_error(c, &r, 405, "Method Not Allowed");
 out:
 	conn_close(c);
 	return NULL;

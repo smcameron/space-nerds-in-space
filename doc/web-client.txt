@@ -12,10 +12,10 @@ client runs in the browser.  snis_server, snis_multiverse and ssgl_server are
 the same native programs as always.
 
 This is new and incomplete.  What works: connecting to one snis_server
-without the lobby (as in doc/lobbyless-operation.txt), every station, sound
-effects, keyboard, mouse and typing.  What does not, yet: the lobby, and so
-warp gates between solarsystems; voice chat; text to speech; joysticks;
-finding lobbies on the local network; the launcher.
+without the lobby (as in doc/lobbyless-operation.txt), or through a lobby;
+every station, sound effects, keyboard, mouse and typing.  What does not, yet:
+voice chat; text to speech; joysticks; finding lobbies on the local network;
+the launcher.
 
 Building
 --------
@@ -78,6 +78,8 @@ The page takes options in its address, all of which have defaults:
 
 	host	snis_server's host, as the gateway sees it (default: localhost)
 	port	snis_server's port (default: 2501)
+	lobby	use this lobby instead of host and port (see below)
+	setup	show snis_client's network setup screen instead
 	ship	starship name (default: webship)
 	pw	starship password (default: webpw)
 	args	other snis_client options, separated by spaces
@@ -85,6 +87,27 @@ The page takes options in its address, all of which have defaults:
 for example:
 
 	http://localhost:8088/?ship=enterprise&pw=ncc1701&args=--navigation
+
+With the lobby
+--------------
+
+To use a lobby, and so warp gates between solarsystems, run ssgl_server,
+snis_multiverse and the snis_servers as usual, and tell the gateway where the
+lobby is:
+
+	bin/snis_web_gateway --lobby localhost
+
+It then relays browsers to the lobby and to every game server the lobby
+lists, and keeps that list up to date.  Open
+
+	http://localhost:8088/?lobby=localhost
+
+to join the first game server the lobby lists, or
+
+	http://localhost:8088/?setup
+
+for snis_client's own network setup screen, to choose the lobby, server and
+ship there.  As with host above, the lobby is named as the gateway sees it.
 
 Playing from other machines
 ---------------------------

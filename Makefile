@@ -858,12 +858,14 @@ VORBISFLAGS=-sUSE_VORBIS=1 -sUSE_SDL=2
 SNDLIBS=-sUSE_VORBIS=1
 SNDFLAGS=-DWWVIAUDIO_USE_SDL -DDATADIR=\"${DATADIR}\"
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) $(OD)/mikktspace.o
+# The lobby connection goes over snis_net_transport (snis_web_ssgl.c), not
+# ssgl_connect_to_lobby.c and ssgl_socket_io.c, and a browser never registers
+# a game server with the lobby.
 _SSGLWEBOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
-		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
-		ssgl_register_gameserver.o ssgl_log.o ssgl_get_gamelobby_port.o ssgl_string.o
+		ssgl_get_primary_host_ip_addr.o ssgl_log.o ssgl_get_gamelobby_port.o ssgl_string.o
 SSGL=$(OD)/libssglclient.a
 LIBS=${SSGL} -lm ${PNGLIBS}
-_CLIENTOBJS+=snis_web_stubs.o
+_CLIENTOBJS+=snis_web_stubs.o snis_web_ssgl.o
 # These are for ELF and x86 linkers and compilers, not for wasm.
 COMMA:=,
 MYCFLAGS:=$(filter-out -Wl$(COMMA)% -fstack-clash-protection -D_FORTIFY_SOURCE=3 -fexceptions,${MYCFLAGS})
@@ -1212,6 +1214,9 @@ $(OD)/snis_main_loop_web.o:	snis_main_loop_web.c snis_main_loop.h Makefile ${ODT
 	$(Q)$(COMPILE)
 
 $(OD)/snis_web_stubs.o:	snis_web_stubs.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_web_ssgl.o:	snis_web_ssgl.c snis_net_transport.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/mikktspace.o:	mikktspace/mikktspace.c Makefile ${ODT}

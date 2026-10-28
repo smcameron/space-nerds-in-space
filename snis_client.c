@@ -971,13 +971,12 @@ static void synchronous_update_lobby_info(void)
 outta_here:
 	fprintf(stderr, "snis_client: synchronous lobby connection: lobby socket = %d, done with lobby\n", sock);
 	/* close connection to the lobby */
-	shutdown(sock, SHUT_RDWR);
-	close(sock);
+	snis_net_close(sock);
 	return;
 
 handle_error:
 	if (sock >= 0)
-		close(lobby_socket);
+		snis_net_close(lobby_socket);
 	if (game_server_count > 0) {
 		free(game_server);
 		game_server_count = 0;
@@ -1056,14 +1055,13 @@ try_again:
 outta_here:
 	printf("lobby socket = %d, done with lobby\n", sock);
 	/* close connection to the lobby */
-	shutdown(sock, SHUT_RDWR);
-	close(sock);
+	snis_net_close(sock);
 	lobby_socket = -1;
 	return NULL;
 
 handle_error:
 	if (lobby_socket >= 0)
-		close(lobby_socket);
+		snis_net_close(lobby_socket);
 	lobby_socket = -1;
 	ssgl_sleep(5);
 	if (game_server_count > 0) {
@@ -6059,8 +6057,7 @@ static void lobby_cancel_button_pressed(__attribute__((unused)) void *unused)
 	lobby_selected_server = -1;
 	lobby_count = 0;
 	if (lobby_socket >= 0) {
-		shutdown(lobby_socket, SHUT_RDWR);
-		close(lobby_socket);
+		snis_net_close(lobby_socket);
 		lobby_socket = -1;
 	}
 }
@@ -6163,7 +6160,7 @@ static void we_lost_snis_server(void)
 	clear_damcon_pool();
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 	if (lobby_socket != -1)
-		close(lobby_socket);
+		snis_net_close(lobby_socket);
 	lobby_socket = -1;
 	switched_server = -1;
 	switched_server2 = -1;

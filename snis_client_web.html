@@ -6,6 +6,8 @@
 	Query parameters (all optional):
 		host	snis_server's host, as snis_web_gateway sees it (default: localhost)
 		port	snis_server's port (default: 2501)
+		lobby	use this lobby instead, and join the first server it lists
+		setup	show snis_client's network setup screen instead
 		ship	starship name (default: webship)
 		pw	starship password (default: webpw)
 		args	any other snis_client options, space separated, e.g. args=--navigation
@@ -27,13 +29,17 @@
 <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
 <script>
 	var params = new URLSearchParams(location.search);
-	var args = [
-		'--no-launcher', '--no-splash-screen', '--nolobby',
-		'--serverhost', params.get('host') || 'localhost',
-		'--serverport', params.get('port') || '2501',
-		'--starship', params.get('ship') || 'webship',
-		'--pw', params.get('pw') || 'webpw',
-	];
+	var args = ['--no-launcher', '--no-splash-screen'];
+	var ship = ['--starship', params.get('ship') || 'webship', '--pw', params.get('pw') || 'webpw'];
+
+	if (params.has('setup'))
+		; /* the client's own network setup screen */
+	else if (params.get('lobby'))
+		args = args.concat(['--lobbyhost', params.get('lobby'), '--quickstart'], ship);
+	else
+		args = args.concat(['--nolobby',
+			'--serverhost', params.get('host') || 'localhost',
+			'--serverport', params.get('port') || '2501'], ship);
 	if (params.get('args'))
 		args = args.concat(params.get('args').split(' ').filter(function(a) { return a.length; }));
 
