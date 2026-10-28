@@ -89,11 +89,42 @@ Serve HTTP only and do not set up TLS/HTTPS.  This is sufficient when the
 browser is running on the same machine as the gateway (\fBhttp://localhost\fR).
 .TP
 \fB\-v, \-\-verbose\fR
-Print additional diagnostic messages to standard error, including allowed relay
-addresses, HTTP requests, and TLS handshake failures.
+Print additional diagnostic messages to standard error, including HTTP
+requests, HTTP error responses, and TLS handshake failures.
 .TP
 \fB\-h, \-\-help\fR
 Print a usage message and exit.
+.SH URL QUERY PARAMETERS
+.PP
+The \fBsnis_client.html\fR page served at \fB/\fR accepts the following optional
+URL query parameters (all hostnames and ports are as seen by
+\fBsnis_web_gateway\fR):
+.TP
+\fBhost=\fIhostname\fR
+Connect directly to the snis_server at \fIhostname\fR without using a lobby
+(default \fBlocalhost\fR).
+.TP
+\fBport=\fIport\fR
+Port of the snis_server when connecting without a lobby (default \fB2501\fR).
+.TP
+\fBlobby=\fIhostname\fR
+Connect to the ssgl_server lobby at \fIhostname\fR instead of using \fBhost\fR
+and \fBport\fR, and automatically join the first game server it lists.
+.TP
+\fBsetup\fR
+Start \fBsnis_client\fR on its network setup screen instead of connecting
+immediately, allowing the lobby, game server, and ship to be chosen in the
+client UI.
+.TP
+\fBship=\fIname\fR
+Starship name (default \fBwebship\fR).
+.TP
+\fBpw=\fIpassword\fR
+Starship password (default \fBwebpw\fR).
+.TP
+\fBargs=\fIoptions\fR
+Additional space-separated \fBsnis_client\fR command-line options (for example,
+\fBargs=\-\-navigation\fR).
 .SH EXAMPLES
 .PP
 For a bare snis_server started without a lobby on port 2501:
@@ -111,6 +142,10 @@ To allow connections to a lobby server and all game servers registered with it:
 
 	snis_web_gateway --lobby localhost
 .fi
+.PP
+Then open \fBhttp://localhost:8088/?lobby=localhost\fR to join the first game
+server listed by the lobby, or \fBhttp://localhost:8088/?setup\fR to use
+snis_client's network setup screen.
 .SH FILES
 .TP
 \fBbin/web\fR
