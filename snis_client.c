@@ -28279,6 +28279,14 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
+	/* Join a ship named on the command line, creating it if it does not exist yet, as
+	 * happens when its name was saved as the default.  Insisting on creating it would fail
+	 * for every crew member after the first, on a machine with no saved default.
+	 */
+	if (shipname) {
+		net_setup_ui.create_ship_v = 0;
+		net_setup_ui.join_ship_v = 1;
+	}
 	init_launcher_ui();
 	init_options_ui();
 	snis_prefs_read_client_tweaks(xdg_base_ctx, set_clientside_variable);
