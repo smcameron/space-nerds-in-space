@@ -3768,6 +3768,21 @@ static void interpolate_laser(double timestamp, struct snis_entity *o, int visib
 #endif
 }
 
+static void request_universe_timestamp(void);
+
+static void maybe_request_universe_timestamp(void)
+{
+	static double last_request_time = 0.0;
+	double now = time_now_double();
+
+	if (!connected_to_gameserver)
+		return;
+	if (now - last_request_time < 5.0)
+		return;
+	last_request_time = now;
+	request_universe_timestamp();
+}
+
 static void move_object(double timestamp, struct snis_entity *o, interpolate_update_func interp_func)
 {
 	int nupdates = imin(SNIS_ENTITY_NUPDATE_HISTORY, o->nupdates);
@@ -3814,6 +3829,8 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 		 */
 		if (nupdates < SNIS_ENTITY_NUPDATE_HISTORY)
 			visible = 0;
+		else
+			maybe_request_universe_timestamp();
 #ifdef INTERP_DEBUG
 		printf("move_object: all updates newer time=%f visible=%d, oldest_update_delta=%f\n",
 			target_time, visible, o->updatetime[nupdates - 1] - target_time);
@@ -7099,6 +7116,7 @@ static int process_set_solarsystem(void)
 	old_solarsystem_assets = solarsystem_assets;
 	solarsystem_assets = assets;
 	per_solarsystem_textures_loaded = 0;
+	request_universe_timestamp();
 	return 0;
 }
 
@@ -7117,7 +7135,8 @@ static int process_update_universe_timestamp(double update_time)
 
 	pthread_mutex_lock(&universe_mutex);
 
-	if (code == UPDATE_UNIVERSE_TIMESTAMP_START_SAMPLE)
+	if (code == UPDATE_UNIVERSE_TIMESTAMP_START_SAMPLE ||
+	    nuniverse_timestamp_samples >= UPDATE_UNIVERSE_TIMESTAMP_COUNT)
 		nuniverse_timestamp_samples = 0;
 
 	universe_timestamp_samples[nuniverse_timestamp_samples].offset =
@@ -7153,7 +7172,9 @@ static int process_update_universe_timestamp(double update_time)
 			mean_square += (universe_timestamp_samples[i].offset - median_offset) *
 				(universe_timestamp_samples[i].offset - median_offset);
 		}
-		double standard_deviation = sqrt(mean_square / (double)(nuniverse_timestamp_samples - 1));
+		double standard_deviation = 0.0;
+		if (nuniverse_timestamp_samples > 1)
+			standard_deviation = sqrt(mean_square / (double)(nuniverse_timestamp_samples - 1));
 
 		/* average offsets within one standard deviation */
 		int nsoffset = 0;
@@ -9779,8 +9800,6 @@ static int role_to_displaymode(uint32_t the_role)
 	}
 	return display_mode;
 }
-
-static void request_universe_timestamp(void);
 
 static void send_build_info_to_server(void)
 {
@@ -25657,6 +25676,8 @@ static int load_per_solarsystem_textures(void)
 		j = (j + 1) % solarsystem_assets->nplanet_textures;
 	}
 	per_solarsystem_textures_loaded = 1;
+	if (connected_to_gameserver)
+		request_universe_timestamp();
 	update_splash_progress(70);
 	return 1;
 }
