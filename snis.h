@@ -134,7 +134,7 @@
 
 #define SHIELD_EFFECT_LIFETIME 60
 
-#define SNIS_ENTITY_NUPDATE_HISTORY 4
+#define SNIS_ENTITY_NUPDATE_HISTORY 8
 
 /* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
  * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
@@ -1147,9 +1147,9 @@ struct snis_entity {
 	struct entity *entity;	/* Corresponding renderer entity */
 	int nupdates;		/* number of times this object has been updated. Used for interpolation */
 				/* see move_object() in snis_client.c */
-	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY]; /* last 4 update timestamps */
-	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];	/* last 4 object x,y,z positions */
-	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];	/* last 4 object orientations */
+	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY]; /* last N update timestamps */
+	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];	/* last N object x,y,z positions */
+	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];	/* last N object orientations */
 
 	struct snis_entity *shading_planet;	/* if object is in shadow of planet, shading_planet will */
 				/* point to the planet that casts the shadow on the object. Otherwise null */
