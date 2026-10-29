@@ -3806,13 +3806,19 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 	}
 
 	if (from_index < 0) {
-		/* all updates are newer, set hidden at oldest update */
+		/* All updates are newer than target_time.  If the history buffer is not yet
+		 * full, hide until time catches up to the oldest update; once it is full,
+		 * new updates push out the oldest one at the same rate time advances, so
+		 * hiding would keep a frequently-updated object invisible forever if the
+		 * client's universe_timestamp() lags behind the server.
+		 */
+		if (nupdates < SNIS_ENTITY_NUPDATE_HISTORY)
+			visible = 0;
 #ifdef INTERP_DEBUG
-		printf("move_object: all updates newer time=%f so hiding, oldest_update_delta=%f\n", target_time,
-			o->updatetime[nupdates-1] - target_time);
+		printf("move_object: all updates newer time=%f visible=%d, oldest_update_delta=%f\n",
+			target_time, visible, o->updatetime[nupdates - 1] - target_time);
 #endif
-		/* hide until time catches up to the oldtest update */
-		interp_func(timestamp, o, 0, nupdates-1, nupdates-1, 0);
+		interp_func(timestamp, o, visible, nupdates - 1, nupdates - 1, 0);
 		return;
 	}
 
