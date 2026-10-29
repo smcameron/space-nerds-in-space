@@ -548,7 +548,7 @@ void graph_dev_set_no_texture_mode()
 
 int graph_dev_texture_ready(int i)
 {
-	if (i < 0 || i >= MAX_LOADED_TEXTURES)
+	if (i < 0)
 		return 0;
 	if (i == 0)
 		return 1;
