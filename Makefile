@@ -1639,40 +1639,16 @@ libopus-web.a:	opus-1.3.1
 		--disable-extra-programs --disable-doc --disable-rtcd --disable-intrinsics \
 		--disable-stack-protector && emmake $(MAKE) && cp .libs/libopus.a ../libopus-web.a)
 
+FUZZ_COMPILE=afl-clang-fast -g3 -fsanitize=address,undefined $< -lm -o $@
+
 fuzz_obj_parser:	fuzz_obj_parser.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -I/usr/include/SDL2 -lm -o fuzz_obj_parser
+	$(FUZZ_COMPILE) -I/usr/include/SDL2
 
-fuzz_snis_read_ship_types:	fuzz_snis_read_ship_types.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_snis_read_ship_types.c \
-		-lm -o fuzz_snis_read_ship_types
-
-fuzz_read_joystick_config:	fuzz_read_joystick_config.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_joystick_config.c \
-		-lm -o fuzz_read_joystick_config
-
-fuzz_read_commodities:	fuzz_read_commodities.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_commodities.c \
-		-lm -o fuzz_read_commodities
-
-fuzz_read_starbase_metadata:	fuzz_read_starbase_metadata.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_starbase_metadata.c \
-		-lm -o fuzz_read_starbase_metadata
-
-fuzz_read_docking_port_attachments:	fuzz_read_docking_port_attachments.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_docking_port_attachments.c \
-		-lm -o fuzz_read_docking_port_attachments
-
-fuzz_read_thrust_attachments:	fuzz_read_thrust_attachments.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_thrust_attachments.c \
-		-lm -o fuzz_read_thrust_attachments
-
-fuzz_solarsystem_asset_spec_read:	fuzz_solarsystem_asset_spec_read.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_solarsystem_asset_spec_read.c \
-		-lm -o fuzz_solarsystem_asset_spec_read
+fuzz_%:	fuzz_%.c
+	$(FUZZ_COMPILE)
 
 fuzz_process_manifest:	fuzz_process_manifest.c util/snis_update_assets.c Makefile
-	afl-clang-fast -g3 -fsanitize=address,undefined -I/usr/include/SDL2 fuzz_process_manifest.c \
-		-lm -o fuzz_process_manifest -lcrypto
+	$(FUZZ_COMPILE) -I/usr/include/SDL2 -lcrypto
 
 run-fuzz-obj-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
 	/bin/rm -fr fuzz.out
@@ -1684,45 +1660,25 @@ run-fuzz-stl-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
 	afl-fuzz -T "Fuzzing read_stl_parser" -i fuzztests/read_stl_file \
 		-o fuzz.out -- ./fuzz_obj_parser stl
 
-run-fuzz-snis-read-ship-types:	fuzz_snis_read_ship_types put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing snis_read_ship_types" -i fuzztests/snis_read_ship_types \
-		-o fuzz.out -- ./fuzz_snis_read_ship_types
+run-fuzz-snis-read-ship-types:	fuzz_snis_read_ship_types
+run-fuzz-solarsystem-asset-spec-read:	fuzz_solarsystem_asset_spec_read
+run-fuzz-read-thrust-attachments:	fuzz_read_thrust_attachments
+run-fuzz-process_manifest:	fuzz_process_manifest
+run-fuzz-read-joystick-config:	fuzz_read_joystick_config
+run-fuzz-read-commodities:	fuzz_read_commodities
+run-fuzz-read-starbase-metadata:	fuzz_read_starbase_metadata
+run-fuzz-read-docking-port-attachments:	fuzz_read_docking_port_attachments
 
-run-fuzz-solarsystem-asset-spec-read:	fuzz_solarsystem_asset_spec_read put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing solarsystem_asset_spec_read" -i fuzztests/solarsystem_asset_spec_read \
-		-o fuzz.out -- ./fuzz_solarsystem_asset_spec_read
+RUN_FUZZ_TARGETS=run-fuzz-snis-read-ship-types run-fuzz-solarsystem-asset-spec-read \
+	run-fuzz-read-thrust-attachments run-fuzz-process_manifest \
+	run-fuzz-read-joystick-config run-fuzz-read-commodities \
+	run-fuzz-read-starbase-metadata run-fuzz-read-docking-port-attachments
 
-run-fuzz-read-thrust-attachments:	fuzz_read_thrust_attachments put-cpu-in-hi-performance-mode
+${RUN_FUZZ_TARGETS}: put-cpu-in-hi-performance-mode
 	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing solarsystem_asset_spec_read" -i fuzztests/read_thrust_attachments \
-		-o fuzz.out -- ./fuzz_read_thrust_attachments
-
-run-fuzz-process_manifest:	fuzz_process_manifest put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing process_manifest" -i fuzztests/process_manifest \
-		-o fuzz.out -- ./fuzz_process_manifest
-
-run-fuzz-read-joystick-config:	fuzz_read_joystick_config put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing read_joystick_config" -i fuzztests/read_joystick_config \
-		-o fuzz.out -- ./fuzz_read_joystick_config
-
-run-fuzz-read-commodities:	fuzz_read_commodities put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing read_commodities" -i fuzztests/read_commodities \
-		-o fuzz.out -- ./fuzz_read_commodities
-
-run-fuzz-read-starbase-metadata:	fuzz_read_starbase_metadata put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing read starbase metadata" -i fuzztests/read_starbase_metadata \
-		-o fuzz.out -- ./fuzz_read_starbase_metadata
-
-run-fuzz-read-docking-port-attachments:	fuzz_read_docking_port_attachments put-cpu-in-hi-performance-mode
-	/bin/rm -fr fuzz.out
-	afl-fuzz -T "Fuzzing read docking port attachments" -i fuzztests/read_docking_port_attachments \
-		-o fuzz.out -- ./fuzz_read_docking_port_attachments
+	afl-fuzz -T "Fuzzing $(patsubst fuzz_%,%,$(filter fuzz_%,$^))" \
+		-i fuzztests/$(patsubst fuzz_%,%,$(filter fuzz_%,$^)) \
+		-o fuzz.out -- ./$(filter fuzz_%,$^)
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
