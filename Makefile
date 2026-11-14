@@ -123,12 +123,8 @@ endif
 DATADIR=${DESTDIR}${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
 CONFIGSRCDIR=./share/snis
-CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
-	${CONFIGSRCDIR}/factions.txt \
-	${CONFIGSRCDIR}/ship_types.txt \
-	${CONFIGSRCDIR}/starbase_models.txt \
-	${CONFIGSRCDIR}/user_colors.cfg \
-	${CONFIGSRCDIR}/joystick_config.txt
+CONFIGFILES=$(addprefix ${CONFIGSRCDIR}/,commodities.txt factions.txt \
+	ship_types.txt starbase_models.txt user_colors.cfg joystick_config.txt)
 SOLARSYSTEMSRCDIR=${CONFIGSRCDIR}/solarsystems
 SOLARSYSTEMDIR=${DATADIR}/solarsystems
 SOLARSYSTEMFILES=${SOLARSYSTEMSRCDIR}/default/assets.txt
@@ -139,381 +135,143 @@ MODELSRCDIR=${ASSETSSRCDIR}/models
 MODELDIR=${DATADIR}/models
 SOUNDDIR=${DATADIR}/sounds
 SOUNDSRCDIR=${ASSETSSRCDIR}/sounds
-SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
-	${SOUNDSRCDIR}/atmospheric-friction.ogg \
-	${SOUNDSRCDIR}/big_explosion.ogg \
-	${SOUNDSRCDIR}/bigshotlaser.ogg \
-	${SOUNDSRCDIR}/changescreen.ogg \
-	${SOUNDSRCDIR}/comms-hail.ogg \
-	${SOUNDSRCDIR}/crewmember-has-joined.ogg \
-	${SOUNDSRCDIR}/dangerous-radiation.ogg \
-	${SOUNDSRCDIR}/docking-sound.ogg \
-	${SOUNDSRCDIR}/docking-system-disengaged.ogg \
-	${SOUNDSRCDIR}/docking-system-engaged.ogg \
-	${SOUNDSRCDIR}/entering-high-security-area.ogg \
-	${SOUNDSRCDIR}/flak_gun_sound.ogg \
-	${SOUNDSRCDIR}/flak_hit.ogg \
-	${SOUNDSRCDIR}/fuel-levels-critical.ogg \
-	${SOUNDSRCDIR}/incoming-fire-detected.ogg \
-	${SOUNDSRCDIR}/laser-fail.ogg \
-	${SOUNDSRCDIR}/leaving-high-security-area.ogg \
-	${SOUNDSRCDIR}/mining-bot-deployed.ogg \
-	${SOUNDSRCDIR}/mining-bot-standing-by.ogg \
-	${SOUNDSRCDIR}/mining-bot-stowed.ogg \
-	${SOUNDSRCDIR}/new-starship.ogg \
-	${SOUNDSRCDIR}/offscreen.ogg \
-	${SOUNDSRCDIR}/onscreen.ogg \
-	${SOUNDSRCDIR}/permission-to-dock-denied.ogg \
-	${SOUNDSRCDIR}/permission-to-dock-has-expired.ogg \
-	${SOUNDSRCDIR}/permission-to-dock-granted.ogg \
-	${SOUNDSRCDIR}/proximity-alert.ogg \
-	${SOUNDSRCDIR}/red-alert.ogg \
-	${SOUNDSRCDIR}/reverse.ogg \
-	${SOUNDSRCDIR}/robot-insert-component.ogg \
-	${SOUNDSRCDIR}/robot-remove-component.ogg \
-	${SOUNDSRCDIR}/science-data-acquired.ogg \
-	${SOUNDSRCDIR}/science-probe.ogg \
-	${SOUNDSRCDIR}/short-warpdrive.ogg \
-	${SOUNDSRCDIR}/slider-noise.ogg \
-	${SOUNDSRCDIR}/spaceship-crash.ogg \
-	${SOUNDSRCDIR}/torpedo-loading.ogg \
-	${SOUNDSRCDIR}/transporter-sound.ogg \
-	${SOUNDSRCDIR}/tty-chatter.ogg \
-	${SOUNDSRCDIR}/warning-hull-breach-imminent.ogg \
-	${SOUNDSRCDIR}/warp-drive-fumble.ogg \
-	${SOUNDSRCDIR}/warpdrive.ogg \
-	${SOUNDSRCDIR}/welcome-to-starbase.ogg \
-	${SOUNDSRCDIR}/hull-creak-0.ogg \
-	${SOUNDSRCDIR}/hull-creak-1.ogg \
-	${SOUNDSRCDIR}/hull-creak-2.ogg \
-	${SOUNDSRCDIR}/hull-creak-3.ogg \
-	${SOUNDSRCDIR}/hull-creak-4.ogg \
-	${SOUNDSRCDIR}/hull-creak-5.ogg \
-	${SOUNDSRCDIR}/hull-creak-6.ogg \
-	${SOUNDSRCDIR}/hull-creak-7.ogg \
-	${SOUNDSRCDIR}/hull-creak-8.ogg \
-	${SOUNDSRCDIR}/hull-creak-9.ogg \
-	${SOUNDSRCDIR}/ui1.ogg \
-	${SOUNDSRCDIR}/ui2.ogg \
-	${SOUNDSRCDIR}/ui3.ogg \
-	${SOUNDSRCDIR}/ui4.ogg \
-	${SOUNDSRCDIR}/ui5.ogg \
-	${SOUNDSRCDIR}/ui6.ogg \
-	${SOUNDSRCDIR}/ui7.ogg \
-	${SOUNDSRCDIR}/ui8.ogg \
-	${SOUNDSRCDIR}/ui9.ogg \
-	${SOUNDSRCDIR}/ui10.ogg \
-	${SOUNDSRCDIR}/ui11.ogg \
-	${SOUNDSRCDIR}/ui12.ogg \
-	${SOUNDSRCDIR}/ui13.ogg \
-	${SOUNDSRCDIR}/ui14.ogg \
-	${SOUNDSRCDIR}/ui15.ogg \
-	${SOUNDSRCDIR}/ui16.ogg \
-	${SOUNDSRCDIR}/ui17.ogg \
-	${SOUNDSRCDIR}/ui18.ogg \
-	${SOUNDSRCDIR}/ui19.ogg \
-	${SOUNDSRCDIR}/ui20.ogg \
-	${SOUNDSRCDIR}/ui21.ogg \
-	${SOUNDSRCDIR}/ui22.ogg \
-	${SOUNDSRCDIR}/ui23.ogg \
-	${SOUNDSRCDIR}/ui24.ogg \
-	${SOUNDSRCDIR}/ui25.ogg \
-	${SOUNDSRCDIR}/ui26.ogg \
-	${SOUNDSRCDIR}/ui27.ogg \
-	${SOUNDSRCDIR}/ui28.ogg \
-	${SOUNDSRCDIR}/ui29.ogg \
-	${SOUNDSRCDIR}/spacemonster_slap.ogg \
-	${SOUNDSRCDIR}/alarm_buzzer.ogg \
-	${SOUNDSRCDIR}/atlas_rocket_sample.ogg \
-	${SOUNDSRCDIR}/maneuvering_thruster.ogg \
-	${SOUNDSRCDIR}/quindar-intro.ogg \
-	${SOUNDSRCDIR}/quindar-outro.ogg \
-	${SOUNDSRCDIR}/missile_launch.ogg
+SOUNDFILES=$(addprefix ${SOUNDSRCDIR}/,Attribution.txt \
+	atmospheric-friction.ogg big_explosion.ogg bigshotlaser.ogg \
+	changescreen.ogg comms-hail.ogg crewmember-has-joined.ogg \
+	dangerous-radiation.ogg docking-sound.ogg \
+	docking-system-disengaged.ogg docking-system-engaged.ogg \
+	entering-high-security-area.ogg flak_gun_sound.ogg flak_hit.ogg \
+	fuel-levels-critical.ogg incoming-fire-detected.ogg laser-fail.ogg \
+	leaving-high-security-area.ogg mining-bot-deployed.ogg \
+	mining-bot-standing-by.ogg mining-bot-stowed.ogg new-starship.ogg \
+	offscreen.ogg onscreen.ogg permission-to-dock-denied.ogg \
+	permission-to-dock-has-expired.ogg permission-to-dock-granted.ogg \
+	proximity-alert.ogg red-alert.ogg reverse.ogg \
+	robot-insert-component.ogg robot-remove-component.ogg \
+	science-data-acquired.ogg science-probe.ogg short-warpdrive.ogg \
+	slider-noise.ogg spaceship-crash.ogg torpedo-loading.ogg \
+	transporter-sound.ogg tty-chatter.ogg warning-hull-breach-imminent.ogg \
+	warp-drive-fumble.ogg warpdrive.ogg welcome-to-starbase.ogg \
+	hull-creak-0.ogg hull-creak-1.ogg hull-creak-2.ogg hull-creak-3.ogg \
+	hull-creak-4.ogg hull-creak-5.ogg hull-creak-6.ogg hull-creak-7.ogg \
+	hull-creak-8.ogg hull-creak-9.ogg \
+	ui1.ogg ui2.ogg ui3.ogg ui4.ogg ui5.ogg ui6.ogg ui7.ogg ui8.ogg \
+	ui9.ogg ui10.ogg ui11.ogg ui12.ogg ui13.ogg ui14.ogg ui15.ogg ui16.ogg \
+	ui17.ogg ui18.ogg ui19.ogg ui20.ogg ui21.ogg ui22.ogg ui23.ogg \
+	ui24.ogg ui25.ogg ui26.ogg ui27.ogg ui28.ogg ui29.ogg \
+	spacemonster_slap.ogg alarm_buzzer.ogg atlas_rocket_sample.ogg \
+	maneuvering_thruster.ogg quindar-intro.ogg quindar-outro.ogg \
+	missile_launch.ogg)
 
 TEXTUREDIR=${DATADIR}/textures
 TEXTURESRCDIR=${ASSETSSRCDIR}/textures
-TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
-	${TEXTURESRCDIR}/asteroid1-0.png \
-	${TEXTURESRCDIR}/asteroid1-1.png \
-	${TEXTURESRCDIR}/asteroid1-2.png \
-	${TEXTURESRCDIR}/asteroid1-3.png \
-	${TEXTURESRCDIR}/asteroid1-4.png \
-	${TEXTURESRCDIR}/asteroid1-5.png \
-	${TEXTURESRCDIR}/asteroid2-0.png \
-	${TEXTURESRCDIR}/asteroid2-1.png \
-	${TEXTURESRCDIR}/asteroid2-2.png \
-	${TEXTURESRCDIR}/asteroid2-3.png \
-	${TEXTURESRCDIR}/asteroid2-4.png \
-	${TEXTURESRCDIR}/asteroid2-5.png \
-	${TEXTURESRCDIR}/Attribution.txt \
-	${TEXTURESRCDIR}/green-laser-texture.png \
-	${TEXTURESRCDIR}/image0.png \
-	${TEXTURESRCDIR}/image1.png \
-	${TEXTURESRCDIR}/image2.png \
-	${TEXTURESRCDIR}/image3.png \
-	${TEXTURESRCDIR}/image4.png \
-	${TEXTURESRCDIR}/image5.png \
-	${TEXTURESRCDIR}/nebula0.png \
-	${TEXTURESRCDIR}/nebula1.png \
-	${TEXTURESRCDIR}/nebula2.png \
-	${TEXTURESRCDIR}/nebula3.png \
-	${TEXTURESRCDIR}/nebula4.png \
-	${TEXTURESRCDIR}/nebula5.png \
-	${TEXTURESRCDIR}/orange-haze0.png \
-	${TEXTURESRCDIR}/orange-haze1.png \
-	${TEXTURESRCDIR}/orange-haze2.png \
-	${TEXTURESRCDIR}/orange-haze3.png \
-	${TEXTURESRCDIR}/orange-haze4.png \
-	${TEXTURESRCDIR}/orange-haze5.png \
-	${TEXTURESRCDIR}/planetary-ring0.png \
-	${TEXTURESRCDIR}/planet-texture0-0.png \
-	${TEXTURESRCDIR}/planet-texture0-1.png \
-	${TEXTURESRCDIR}/planet-texture0-2.png \
-	${TEXTURESRCDIR}/planet-texture0-3.png \
-	${TEXTURESRCDIR}/planet-texture0-4.png \
-	${TEXTURESRCDIR}/planet-texture0-5.png \
-	${TEXTURESRCDIR}/planet-texture0.png \
-	${TEXTURESRCDIR}/planet-texture1-0.png \
-	${TEXTURESRCDIR}/planet-texture1-1.png \
-	${TEXTURESRCDIR}/planet-texture1-2.png \
-	${TEXTURESRCDIR}/planet-texture1-3.png \
-	${TEXTURESRCDIR}/planet-texture1-4.png \
-	${TEXTURESRCDIR}/planet-texture1-5.png \
-	${TEXTURESRCDIR}/planet-texture1.png \
-	${TEXTURESRCDIR}/planet-texture2-0.png \
-	${TEXTURESRCDIR}/planet-texture2-1.png \
-	${TEXTURESRCDIR}/planet-texture2-2.png \
-	${TEXTURESRCDIR}/planet-texture2-3.png \
-	${TEXTURESRCDIR}/planet-texture2-4.png \
-	${TEXTURESRCDIR}/planet-texture2-5.png \
-	${TEXTURESRCDIR}/planet-texture2.png \
-	${TEXTURESRCDIR}/planet-texture3-0.png \
-	${TEXTURESRCDIR}/planet-texture3-1.png \
-	${TEXTURESRCDIR}/planet-texture3-2.png \
-	${TEXTURESRCDIR}/planet-texture3-3.png \
-	${TEXTURESRCDIR}/planet-texture3-4.png \
-	${TEXTURESRCDIR}/planet-texture3-5.png \
-	${TEXTURESRCDIR}/planet-texture3.png \
-	${TEXTURESRCDIR}/planet-texture4-0.png \
-	${TEXTURESRCDIR}/planet-texture4-1.png \
-	${TEXTURESRCDIR}/planet-texture4-2.png \
-	${TEXTURESRCDIR}/planet-texture4-3.png \
-	${TEXTURESRCDIR}/planet-texture4-4.png \
-	${TEXTURESRCDIR}/planet-texture4-5.png \
-	${TEXTURESRCDIR}/red-laser-texture.png \
-	${TEXTURESRCDIR}/red-torpedo-texture.png \
-	${TEXTURESRCDIR}/SearchTex.h \
-	${TEXTURESRCDIR}/shield-effect-0.png \
-	${TEXTURESRCDIR}/shield-effect-1.png \
-	${TEXTURESRCDIR}/shield-effect-2.png \
-	${TEXTURESRCDIR}/shield-effect-3.png \
-	${TEXTURESRCDIR}/shield-effect-4.png \
-	${TEXTURESRCDIR}/shield-effect-5.png \
-	${TEXTURESRCDIR}/space-blue-plasma.png \
-	${TEXTURESRCDIR}/spark-texture.png \
-	${TEXTURESRCDIR}/sun.png \
-	${TEXTURESRCDIR}/test0.png \
-	${TEXTURESRCDIR}/test1.png \
-	${TEXTURESRCDIR}/test2.png \
-	${TEXTURESRCDIR}/test3.png \
-	${TEXTURESRCDIR}/test4.png \
-	${TEXTURESRCDIR}/test5.png \
-	${TEXTURESRCDIR}/thrust.png \
-	${TEXTURESRCDIR}/warp-effect.png \
-	${TEXTURESRCDIR}/warp-tunnel.png \
-	${TEXTURESRCDIR}/wormhole.png \
-	${TEXTURESRCDIR}/green-burst.png \
-	${TEXTURESRCDIR}/blue-tractor-texture.png \
-	${TEXTURESRCDIR}/missile_texture.png \
-	${TEXTURESRCDIR}/black_hole.png \
-	${TEXTURESRCDIR}/docking_port_emit.png \
-	${TEXTURESRCDIR}/docking_port_texture.png \
-	${TEXTURESRCDIR}/green-spark.png \
-	${TEXTURESRCDIR}/laserflash.png \
-	${TEXTURESRCDIR}/spacemonster_emit.png \
-	${TEXTURESRCDIR}/spacemonster_tentacle_emit.png \
-	${TEXTURESRCDIR}/spacemonster_tentacle_texture.png \
-	${TEXTURESRCDIR}/spacemonster_texture.png \
-	${TEXTURESRCDIR}/spaceplate.png \
-	${TEXTURESRCDIR}/spaceplate_small.png \
-	${TEXTURESRCDIR}/spaceplate_small_emit.png \
-	${TEXTURESRCDIR}/spaceplateemit.png \
-	${TEXTURESRCDIR}/thrust_flare.png \
-	${TEXTURESRCDIR}/thrustblue.png \
-	${TEXTURESRCDIR}/thrustgreen.png \
-	${TEXTURESRCDIR}/thrustred.png \
-	${TEXTURESRCDIR}/thrustviolet.png \
-	${TEXTURESRCDIR}/thrustyellow.png \
-	${TEXTURESRCDIR}/warpgate_emit.png \
-	${TEXTURESRCDIR}/warpgate_texture.png \
-	${TEXTURESRCDIR}/anamorphic_flare.png \
-	${TEXTURESRCDIR}/lens_flare_ghost.png \
-	${TEXTURESRCDIR}/lens_flare_halo.png
+TEXTUREFILES=$(addprefix ${TEXTURESRCDIR}/,AreaTex.h \
+	asteroid1-0.png asteroid1-1.png asteroid1-2.png \
+	asteroid1-3.png asteroid1-4.png asteroid1-5.png \
+	asteroid2-0.png asteroid2-1.png asteroid2-2.png \
+	asteroid2-3.png asteroid2-4.png asteroid2-5.png \
+	Attribution.txt green-laser-texture.png \
+	image0.png image1.png image2.png image3.png image4.png image5.png \
+	nebula0.png nebula1.png nebula2.png nebula3.png nebula4.png nebula5.png \
+	orange-haze0.png orange-haze1.png orange-haze2.png \
+	orange-haze3.png orange-haze4.png orange-haze5.png \
+	planetary-ring0.png \
+	planet-texture0-0.png planet-texture0-1.png planet-texture0-2.png \
+	planet-texture0-3.png planet-texture0-4.png planet-texture0-5.png \
+	planet-texture0.png \
+	planet-texture1-0.png planet-texture1-1.png planet-texture1-2.png \
+	planet-texture1-3.png planet-texture1-4.png planet-texture1-5.png \
+	planet-texture1.png \
+	planet-texture2-0.png planet-texture2-1.png planet-texture2-2.png \
+	planet-texture2-3.png planet-texture2-4.png planet-texture2-5.png \
+	planet-texture2.png \
+	planet-texture3-0.png planet-texture3-1.png planet-texture3-2.png \
+	planet-texture3-3.png planet-texture3-4.png planet-texture3-5.png \
+	planet-texture3.png \
+	planet-texture4-0.png planet-texture4-1.png planet-texture4-2.png \
+	planet-texture4-3.png planet-texture4-4.png planet-texture4-5.png \
+	red-laser-texture.png red-torpedo-texture.png SearchTex.h \
+	shield-effect-0.png shield-effect-1.png shield-effect-2.png \
+	shield-effect-3.png shield-effect-4.png shield-effect-5.png \
+	space-blue-plasma.png spark-texture.png sun.png \
+	test0.png test1.png test2.png test3.png test4.png test5.png \
+	thrust.png warp-effect.png warp-tunnel.png wormhole.png \
+	green-burst.png blue-tractor-texture.png missile_texture.png \
+	black_hole.png docking_port_emit.png docking_port_texture.png \
+	green-spark.png laserflash.png spacemonster_emit.png \
+	spacemonster_tentacle_emit.png spacemonster_tentacle_texture.png \
+	spacemonster_texture.png spaceplate.png spaceplate_small.png \
+	spaceplate_small_emit.png spaceplateemit.png thrust_flare.png \
+	thrustblue.png thrustgreen.png thrustred.png thrustviolet.png \
+	thrustyellow.png warpgate_emit.png warpgate_texture.png \
+	anamorphic_flare.png lens_flare_ghost.png lens_flare_halo.png)
 
 LUASCRIPTDIR=${DATADIR}/luascripts
 LUASRCDIR=${ASSETSSRCDIR}/luascripts
 LUASCRIPTS=${LUASRCDIR}/MAINMENU.LUA
-LUAMISSIONS=${LUASRCDIR}/MISSIONS/BIGSHIP.LUA \
-	${LUASRCDIR}/MISSIONS/CUBOMUERTE.LUA \
-	${LUASRCDIR}/MISSIONS/DEMOLISHER.LUA \
-	${LUASRCDIR}/MISSIONS/KALI.LUA \
-	${LUASRCDIR}/MISSIONS/ROYAL-WEDDING.LUA \
-	${LUASRCDIR}/MISSIONS/SAVING-PLANET-ERPH.LUA \
-	${LUASRCDIR}/MISSIONS/SPACEPOX.LUA \
-	${LUASRCDIR}/MISSIONS/STURNVULF.LUA \
-	${LUASRCDIR}/MISSIONS/TRAINING-MISSION-1.LUA \
-	${LUASRCDIR}/MISSIONS/TRAINING-MISSION-2.LUA \
-	${LUASRCDIR}/MISSIONS/missions_menu.txt
+LUAMISSIONS=$(addprefix ${LUASRCDIR}/MISSIONS/,BIGSHIP.LUA CUBOMUERTE.LUA \
+	DEMOLISHER.LUA KALI.LUA ROYAL-WEDDING.LUA SAVING-PLANET-ERPH.LUA \
+	SPACEPOX.LUA STURNVULF.LUA TRAINING-MISSION-1.LUA \
+	TRAINING-MISSION-2.LUA missions_menu.txt)
 LUASRCLIBS=${LUASRCDIR}/MISSIONS/lib/interactive_fiction.lua
-LUATESTS=${LUASRCDIR}/TEST/CARGO.LUA \
-	${LUASRCDIR}/TEST/COLLISION.LUA \
-	${LUASRCDIR}/TEST/REVIEW_MODELS.LUA \
-	${LUASRCDIR}/TEST/SILLY-SPACE-BATTLE.LUA \
-	${LUASRCDIR}/TEST/SOUND.LUA \
-	${LUASRCDIR}/TEST/TESTCUSTOMBUTTONS.LUA \
-	${LUASRCDIR}/TEST/TESTDERELICT.LUA \
-	${LUASRCDIR}/TEST/TESTDOCK.LUA \
-	${LUASRCDIR}/TEST/TESTEXPL.LUA \
-	${LUASRCDIR}/TEST/TESTSPHEROID.LUA \
-	${LUASRCDIR}/TEST/TESTWARPEVENT.LUA \
-	${LUASRCDIR}/TEST/TESTINTFIC.LUA \
-	${LUASRCDIR}/TEST/TESTRUNAWAY.LUA \
-	${LUASRCDIR}/TEST/TESTTORP.LUA \
-	${LUASRCDIR}/TEST/TESTDAMAGE.LUA \
-	${LUASRCDIR}/TEST/TESTCIPHER.LUA
-LUAUTILS=${LUASRCDIR}/UTIL/CLEAR_ALL.LUA \
-	${LUASRCDIR}/UTIL/DAMAGE.LUA \
-	${LUASRCDIR}/UTIL/DESTROY_SHIP.LUA \
-	${LUASRCDIR}/UTIL/DISABLE_ANTENNA.LUA \
-	${LUASRCDIR}/UTIL/ENABLE_ANTENNA.LUA \
-	${LUASRCDIR}/UTIL/PAY_PLAYER.LUA \
-	${LUASRCDIR}/UTIL/PLAYER_SPEED_BOOST.LUA \
-	${LUASRCDIR}/UTIL/PLAYER_SPEED_DEFAULT.LUA \
-	${LUASRCDIR}/UTIL/REDALERT.LUA \
-	${LUASRCDIR}/UTIL/REGENERATE.LUA \
-	${LUASRCDIR}/UTIL/RESETBRIDGE.LUA \
-	${LUASRCDIR}/UTIL/RESTORE_SKYBOX.LUA \
-	${LUASRCDIR}/UTIL/SAY.LUA \
-	${LUASRCDIR}/UTIL/SET_PLANET_DESCRIPTION.LUA \
-	${LUASRCDIR}/UTIL/SET_PLANET_ECONOMY.LUA \
-	${LUASRCDIR}/UTIL/SET_PLANET_GOVT.LUA \
-	${LUASRCDIR}/UTIL/SET_PLANET_SECURITY.LUA \
-	${LUASRCDIR}/UTIL/SET_PLANET_TECH.LUA \
-	${LUASRCDIR}/UTIL/LS.LUA \
-	${LUASRCDIR}/UTIL/SETFACTION.LUA \
-	${LUASRCDIR}/UTIL/SET_SB_FACTION_MASK.LUA \
-	${LUASRCDIR}/UTIL/utility_menu.txt
+LUATESTS=$(addprefix ${LUASRCDIR}/TEST/,CARGO.LUA COLLISION.LUA \
+	REVIEW_MODELS.LUA SILLY-SPACE-BATTLE.LUA SOUND.LUA \
+	TESTCUSTOMBUTTONS.LUA TESTDERELICT.LUA TESTDOCK.LUA TESTEXPL.LUA \
+	TESTSPHEROID.LUA TESTWARPEVENT.LUA TESTINTFIC.LUA TESTRUNAWAY.LUA \
+	TESTTORP.LUA TESTDAMAGE.LUA TESTCIPHER.LUA)
+LUAUTILS=$(addprefix ${LUASRCDIR}/UTIL/,CLEAR_ALL.LUA DAMAGE.LUA \
+	DESTROY_SHIP.LUA DISABLE_ANTENNA.LUA ENABLE_ANTENNA.LUA \
+	PAY_PLAYER.LUA PLAYER_SPEED_BOOST.LUA PLAYER_SPEED_DEFAULT.LUA \
+	REDALERT.LUA REGENERATE.LUA RESETBRIDGE.LUA RESTORE_SKYBOX.LUA \
+	SAY.LUA SET_PLANET_DESCRIPTION.LUA SET_PLANET_ECONOMY.LUA \
+	SET_PLANET_GOVT.LUA SET_PLANET_SECURITY.LUA SET_PLANET_TECH.LUA \
+	LS.LUA SETFACTION.LUA SET_SB_FACTION_MASK.LUA utility_menu.txt)
 
 MATERIALDIR=${DATADIR}/materials
 MATERIALSRCDIR=${ASSETSSRCDIR}/materials
-MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
-	${MATERIALSRCDIR}/nebula10.mat \
-	${MATERIALSRCDIR}/nebula11.mat \
-	${MATERIALSRCDIR}/nebula12.mat \
-	${MATERIALSRCDIR}/nebula13.mat \
-	${MATERIALSRCDIR}/nebula14.mat \
-	${MATERIALSRCDIR}/nebula15.mat \
-	${MATERIALSRCDIR}/nebula16.mat \
-	${MATERIALSRCDIR}/nebula17.mat \
-	${MATERIALSRCDIR}/nebula18.mat \
-	${MATERIALSRCDIR}/nebula19.mat \
-	${MATERIALSRCDIR}/nebula1.mat \
-	${MATERIALSRCDIR}/nebula2.mat \
-	${MATERIALSRCDIR}/nebula3.mat \
-	${MATERIALSRCDIR}/nebula4.mat \
-	${MATERIALSRCDIR}/nebula5.mat \
-	${MATERIALSRCDIR}/nebula6.mat \
-	${MATERIALSRCDIR}/nebula7.mat \
-	${MATERIALSRCDIR}/nebula8.mat \
-	${MATERIALSRCDIR}/nebula9.mat
+MATERIALFILES=$(addprefix ${MATERIALSRCDIR}/,nebula0.mat nebula10.mat \
+	nebula11.mat nebula12.mat nebula13.mat nebula14.mat nebula15.mat \
+	nebula16.mat nebula17.mat nebula18.mat nebula19.mat nebula1.mat \
+	nebula2.mat nebula3.mat nebula4.mat nebula5.mat nebula6.mat \
+	nebula7.mat nebula8.mat nebula9.mat)
 
 SHADERDIR=${DESTDIR}${PREFIX}/share/snis/shader
 SHADERSRCDIR=${ASSETSSRCDIR}/shader
-SHADERS=${SHADERSRCDIR}/atmosphere.frag \
-	${SHADERSRCDIR}/atmosphere.vert \
-	${SHADERSRCDIR}/color_by_w.frag \
-	${SHADERSRCDIR}/color_by_w.vert \
-	${SHADERSRCDIR}/csm_depth.frag \
-	${SHADERSRCDIR}/csm_depth.vert \
-	${SHADERSRCDIR}/fs-effect-copy.shader \
-	${SHADERSRCDIR}/line-single-color.frag \
-	${SHADERSRCDIR}/line-single-color.vert \
-	${SHADERSRCDIR}/per_vertex_color.frag \
-	${SHADERSRCDIR}/per_vertex_color.vert \
-	${SHADERSRCDIR}/point_cloud.frag \
-	${SHADERSRCDIR}/point_cloud.vert \
-	${SHADERSRCDIR}/single_color.frag \
-	${SHADERSRCDIR}/single-color-lit-per-pixel.frag \
-	${SHADERSRCDIR}/single-color-lit-per-pixel.vert \
-	${SHADERSRCDIR}/single-color-lit-per-vertex.frag \
-	${SHADERSRCDIR}/single-color-lit-per-vertex.vert \
-	${SHADERSRCDIR}/single_color.vert \
-	${SHADERSRCDIR}/skybox.frag \
-	${SHADERSRCDIR}/skybox.vert \
-	${SHADERSRCDIR}/smaa-blend.shader \
-	${SHADERSRCDIR}/smaa-edge.shader \
-	${SHADERSRCDIR}/smaa-high.shader \
-	${SHADERSRCDIR}/SMAA.hlsl \
-	${SHADERSRCDIR}/smaa-neighborhood.shader \
-	${SHADERSRCDIR}/textured-and-lit-per-pixel.shader \
-	${SHADERSRCDIR}/textured-and-lit-per-vertex.shader \
-	${SHADERSRCDIR}/textured-cubemap-shield-per-pixel.shader \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader \
-	${SHADERSRCDIR}/textured-particle.frag \
-	${SHADERSRCDIR}/textured-particle.vert \
-	${SHADERSRCDIR}/textured.shader \
-	${SHADERSRCDIR}/textured-with-sphere-shadow-per-pixel.shader \
-	${SHADERSRCDIR}/wireframe_filled.frag \
-	${SHADERSRCDIR}/wireframe_filled.vert \
-	${SHADERSRCDIR}/wireframe_transparent.frag \
-	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.frag \
-	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.vert \
-	${SHADERSRCDIR}/wireframe_transparent.vert \
-	${SHADERSRCDIR}/alpha_by_normal.shader
+SHADERS=$(addprefix ${SHADERSRCDIR}/,atmosphere.frag atmosphere.vert \
+	color_by_w.frag color_by_w.vert csm_depth.frag csm_depth.vert \
+	fs-effect-copy.shader line-single-color.frag line-single-color.vert \
+	per_vertex_color.frag per_vertex_color.vert \
+	point_cloud.frag point_cloud.vert \
+	single_color.frag single-color-lit-per-pixel.frag \
+	single-color-lit-per-pixel.vert single-color-lit-per-vertex.frag \
+	single-color-lit-per-vertex.vert single_color.vert \
+	skybox.frag skybox.vert \
+	smaa-blend.shader smaa-edge.shader smaa-high.shader SMAA.hlsl \
+	smaa-neighborhood.shader textured-and-lit-per-pixel.shader \
+	textured-and-lit-per-vertex.shader \
+	textured-cubemap-shield-per-pixel.shader \
+	textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader \
+	textured-particle.frag textured-particle.vert textured.shader \
+	textured-with-sphere-shadow-per-pixel.shader \
+	wireframe_filled.frag wireframe_filled.vert \
+	wireframe_transparent.frag wireframe-transparent-sphere-clip.frag \
+	wireframe-transparent-sphere-clip.vert wireframe_transparent.vert \
+	alpha_by_normal.shader)
 
-SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
-	${MODELSRCDIR}/enforcer.scad_params.h \
-	${MODELSRCDIR}/starbase5.scad_params.h \
-	${MODELSRCDIR}/research-vessel.scad_params.h \
-	${MODELSRCDIR}/conqueror.scad_params.h \
-	${MODELSRCDIR}/cruiser.scad_params.h \
-	${MODELSRCDIR}/asteroid-miner.scad_params.h \
-	${MODELSRCDIR}/battlestar.scad_params.h \
-	${MODELSRCDIR}/wombat.scad_params.h \
-	${MODELSRCDIR}/destroyer.scad_params.h \
-	${MODELSRCDIR}/dragonhawk.scad_params.h \
-	${MODELSRCDIR}/tanker.scad_params.h \
-	${MODELSRCDIR}/swordfish.scad_params.h \
-	${MODELSRCDIR}/vanquisher.scad_params.h \
-	${MODELSRCDIR}/freighter.scad_params.h \
-	${MODELSRCDIR}/scrambler.scad_params.h \
-	${MODELSRCDIR}/spaceship2.scad_params.h \
-	${MODELSRCDIR}/spaceship3.scad_params.h \
-	${MODELSRCDIR}/skorpio.scad_params.h \
-	${MODELSRCDIR}/spaceship.scad_params.h \
-	${MODELSRCDIR}/transport.scad_params.h \
-	${MODELSRCDIR}/escapepod.scad_params.h \
-	${MODELSRCDIR}/mantis.scad_params.h \
-	${MODELSRCDIR}/missile.scad_params.h
+_SCAD_PARAMS_MODELS=disruptor enforcer starbase5 research-vessel conqueror \
+	cruiser asteroid-miner battlestar wombat destroyer dragonhawk tanker \
+	swordfish vanquisher freighter scrambler spaceship2 spaceship3 \
+	skorpio spaceship transport escapepod mantis missile
+SCAD_PARAMS_FILES=$(patsubst %,${MODELSRCDIR}/%.scad_params.h,${_SCAD_PARAMS_MODELS})
 
-DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
-	${MODELSRCDIR}/starbase3.docking_ports.h \
-	${MODELSRCDIR}/starbase4.docking_ports.h \
-	${MODELSRCDIR}/starbase5.docking_ports.h \
-	${MODELSRCDIR}/starbase6.docking_ports.h \
-	${MODELSRCDIR}/starbase.docking_ports.h
+_DOCKING_PORT_MODELS=starbase2 starbase3 starbase4 starbase5 starbase6 starbase
+DOCKING_PORT_FILES=$(patsubst %,${MODELSRCDIR}/%.docking_ports.h,${_DOCKING_PORT_MODELS})
 
 MANSRCDIR=./man
-MAN6PAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
-	${MANSRCDIR}/snis_text_to_speech.sh.6 \
-	ssgl/ssgl_server.6 \
-	${MANSRCDIR}/snis_multiverse.6 \
-	${MANSRCDIR}/snis_update_assets.6 \
-	${MANSRCDIR}/snis-console.6 \
-	${MANSRCDIR}/snis_web_gateway.6
-MAN1PAGES=${MANSRCDIR}/earthlike.1.gz \
-	${MANSRCDIR}/snis_test_audio.1.gz \
-	${MANSRCDIR}/lsssgl.1
+MAN6PAGES=$(addprefix ${MANSRCDIR}/,snis_client.6.gz snis_server.6.gz \
+	snis_text_to_speech.sh.6 snis_multiverse.6 snis_update_assets.6 \
+	snis-console.6 snis_web_gateway.6) ssgl/ssgl_server.6
+MAN1PAGES=$(addprefix ${MANSRCDIR}/,earthlike.1.gz snis_test_audio.1.gz lsssgl.1)
 MAN6DIR=${DESTDIR}${PREFIX}/share/man/man6
 MAN1DIR=${DESTDIR}${PREFIX}/share/man/man1
 
@@ -715,58 +473,18 @@ UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_
 # model directory
 MD=${ASSETSSRCDIR}/models
 
-MODELS=${MD}/freighter.stl \
-	${MD}/laser.stl \
-	${MD}/spaceship.stl \
-	${MD}/torpedo.stl \
-	${MD}/tanker.stl \
-	${MD}/destroyer.stl \
-	${MD}/transport.stl \
-	${MD}/battlestar.stl \
-	${MD}/cruiser.stl \
-	${MD}/tetrahedron.stl \
-	${MD}/flat-tetrahedron.stl \
-	${MD}/big-flat-tetrahedron.stl \
-	${MD}/asteroid.stl \
-	${MD}/asteroid2.stl \
-	${MD}/asteroid3.stl \
-	${MD}/asteroid4.stl \
-	${MD}/wormhole.stl \
-	${MD}/starbase3.stl \
-	${MD}/starbase4.stl \
-	${MD}/starbase5.stl \
-	${MD}/starbase6.stl \
-	${MD}/spacemonster.stl \
-	${MD}/asteroid-miner.stl \
-	${MD}/spaceship2.stl \
-	${MD}/spaceship3.stl \
-	${MD}/dragonhawk.stl \
-	${MD}/skorpio.stl \
-	${MD}/long-triangular-prism.stl \
-	${MD}/ship-icon.stl \
-	${MD}/heading_indicator.stl \
-	${MD}/heading_indicator_tail.stl \
-	${MD}/axis.stl \
-	${MD}/scrambler.stl \
-	${MD}/swordfish.stl \
-	${MD}/wombat.stl \
-	${MD}/spaceship_turret.stl \
-	${MD}/spaceship_turret_base.stl \
-	${MD}/vanquisher.stl \
-	${MD}/docking_port.stl \
-	${MD}/docking_port2.stl \
-	${MD}/warpgate.stl \
-	${MD}/escapepod.stl \
-	${MD}/mantis.stl \
-	${MD}/laser_turret.stl \
-	${MD}/laser_turret_base.stl \
-	${MD}/uv_sphere.stl \
-	${MD}/warp-core.stl \
-	${MD}/space_monster_torso.stl \
-	${MD}/space_monster_tentacle_segment.stl \
-	${MD}/cylinder.stl \
-	${MD}/missile.stl \
-	${MD}/mf-cockpit.stl
+_MODELS=freighter laser spaceship torpedo tanker destroyer transport \
+	battlestar cruiser tetrahedron flat-tetrahedron big-flat-tetrahedron \
+	asteroid asteroid2 asteroid3 asteroid4 wormhole \
+	starbase3 starbase4 starbase5 starbase6 spacemonster asteroid-miner \
+	spaceship2 spaceship3 dragonhawk skorpio long-triangular-prism \
+	ship-icon heading_indicator heading_indicator_tail axis scrambler \
+	swordfish wombat spaceship_turret spaceship_turret_base vanquisher \
+	docking_port docking_port2 warpgate escapepod mantis \
+	laser_turret laser_turret_base uv_sphere warp-core \
+	space_monster_torso space_monster_tentacle_segment cylinder \
+	missile mf-cockpit
+MODELS=$(patsubst %,${MD}/%.stl,${_MODELS})
 
 # compiler specific cflags
 ifeq (${USING_CLANG},)
