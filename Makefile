@@ -594,14 +594,14 @@ PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 SDLLIBS:=$(shell $(SDL2_CONFIG) --libs)
 SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 
+GLADLIBS=
+COMMON_GRAPH_OBJS=graph_dev_texture_cache.o graph_dev_mesh_cache.o graph_dev_context.o graph_dev_shader_setup.o star_light.o
 ifeq (${USE_GLES},0)
-GLADLIBS=
 GLADCFLAGS=-Iextern/glad/include
-GRAPH_OBJS=glad-gl.o graph_dev_opengl.o graph_dev_texture_cache.o graph_dev_mesh_cache.o graph_dev_context.o graph_dev_shader_setup.o opengl_cap.o star_light.o
+GRAPH_OBJS=glad-gl.o graph_dev_opengl.o ${COMMON_GRAPH_OBJS} opengl_cap.o
 else
-GLADLIBS=
 GLADCFLAGS=-Iextern/glad-es/include -DUSE_GLES=1
-GRAPH_OBJS=glad-gles2.o graph_dev_gles.o graph_dev_texture_cache.o graph_dev_mesh_cache.o graph_dev_context.o graph_dev_shader_setup.o gles_cap.o star_light.o
+GRAPH_OBJS=glad-gles2.o graph_dev_gles.o ${COMMON_GRAPH_OBJS} gles_cap.o
 endif
 endif
 
@@ -655,29 +655,21 @@ _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o
 				${ASSET_FETCH_OBJ} ${SPEAK_OBJ}
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
-_SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
+_VIEWER_COMMON_OBJS=shader.o ${GRAPH_OBJS} snis_graph.o \
 				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
 				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
 				snis_xwindows_hacks.o workqueue.o pthread_util.o
+
+_SDLCLIENTOBJS=mesh_viewer.o ${_VIEWER_COMMON_OBJS}
 SDLCLIENTOBJS=$(patsubst %,$(OD)/%,${_SDLCLIENTOBJS}) mikktspace/mikktspace.o
 
-_SHADOWLABOBJS=shader.o ${GRAPH_OBJS} snis_graph.o shadow_lab.o \
-				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
-				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
-				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
-				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
-				snis_xwindows_hacks.o workqueue.o pthread_util.o black_hole_lens.o \
+_SHADOWLABOBJS=shadow_lab.o ${_VIEWER_COMMON_OBJS} black_hole_lens.o \
 				solarsystem_config.o snis_asset_dir.o
 SHADOWLABOBJS=$(patsubst %,$(OD)/%,${_SHADOWLABOBJS}) mikktspace/mikktspace.o
 
-_STARLIGHTPREVIEWOBJS=shader.o ${GRAPH_OBJS} snis_graph.o star_light_preview.o \
-				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
-				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
-				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
-				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
-				snis_xwindows_hacks.o workqueue.o pthread_util.o
+_STARLIGHTPREVIEWOBJS=star_light_preview.o ${_VIEWER_COMMON_OBJS}
 STARLIGHTPREVIEWOBJS=$(patsubst %,$(OD)/%,${_STARLIGHTPREVIEWOBJS}) mikktspace/mikktspace.o
 
 _NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
