@@ -6,12 +6,6 @@
 
 #include "solarsystem_config.h"
 
-void usage()
-{
-	fprintf(stderr, "usage: test_solarsystem_config [solarsystem-asset-file ...]\n");
-	fprintf(stderr, "  with no arguments, runs the self tests\n");
-}
-
 /* ---- self tests ------------------------------------------------------------------------- */
 
 static int failures;

@@ -18,7 +18,7 @@ static int total_tests = 0;
 		} \
 	 } while (0)
 
-static void test1()
+static void test1(void)
 {
 	union quat q, q2, q3;
 	union vec3 vi, vo;
@@ -183,17 +183,17 @@ static void test1()
 	}
 
 	for (i = 0; i < 1000; i++) {
-		union vec3 v1, v2, v3, v4, up;
+		union vec3 p1, p2, p3, p4, up;
 		union quat r;
-		random_point_on_sphere(1.0, &v1.v.x, &v1.v.y, &v1.v.z);
-		random_point_on_sphere(1.0, &v2.v.x, &v2.v.y, &v2.v.z);
+		random_point_on_sphere(1.0, &p1.v.x, &p1.v.y, &p1.v.z);
+		random_point_on_sphere(1.0, &p2.v.x, &p2.v.y, &p2.v.z);
 		random_point_on_sphere(1.0, &up.v.x, &up.v.y, &up.v.z);
-		quat_from_u2v(&r, &v1, &v2, &up);
-		v3 = v1;
-		quat_rot_vec(&v4, &v3, &r);
-		dx = fabs(v4.v.x - v2.v.x);
-		dy = fabs(v4.v.y - v2.v.y);
-		dz = fabs(v4.v.z - v2.v.z);
+		quat_from_u2v(&r, &p1, &p2, &up);
+		p3 = p1;
+		quat_rot_vec(&p4, &p3, &r);
+		dx = fabs(p4.v.x - p2.v.x);
+		dy = fabs(p4.v.y - p2.v.y);
+		dz = fabs(p4.v.z - p2.v.z);
 		TESTIT(dx > 0.001, "quat_from_u2v test failed, x wrong\n");
 		TESTIT(dz > 0.001, "quat_from_u2v test failed, z wrong\n");
 		TESTIT(dy > 0.001, "quat_from_u2v test failed, y wrong\n");
@@ -245,7 +245,6 @@ static void test_quat_from_basis(void)
 	for (i = 0; i < 1000; i++) {
 		union vec3 basis[3];
 		union quat q, want;
-		int axis;
 
 		random_quat(&want);
 		for (axis = 0; axis < 3; axis++)

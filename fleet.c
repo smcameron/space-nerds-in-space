@@ -288,7 +288,7 @@ int32_t fleet_get_leader_id(int fleet_number)
 }
 
 #ifdef TESTFLEET
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	int n, n2, i;
 	union vec3 v;

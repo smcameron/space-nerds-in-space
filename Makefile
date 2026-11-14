@@ -791,7 +791,7 @@ bin/snis_launcher bin/update_assets_from_launcher.sh:
 	chmod +x $@
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h quat.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o ${BIN}
-	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o $@ snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o -lm
 
 $(OD)/snis_faction.o:	string-utils.h
 $(OD)/joystick_web.o:	joystick.h
@@ -1035,8 +1035,8 @@ $(OD)/transport_contract.o:	transport_contract.h
 bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/commodities.o \
 				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
 				${OD}/stacktrace.o ${ODT} ${BIN}
-	$(CC) -g ${ASANFLAG} ${UBSANFLAG} ${BOUNDSFLAGS} -DTEST_TRANSPORT_CONTRACT=1 \
-			-o bin/test_transport_contract transport_contract.c \
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_TRANSPORT_CONTRACT=1 \
+			-o $@ transport_contract.c \
 			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o \
 			${OD}/infinite-taunt.o ${OD}/stacktrace.o -lm
 
@@ -1075,19 +1075,19 @@ test_planetary_atmosphere:	planetary_atmosphere.c ${OD}/mtwist.o Makefile
 $(OD)/key_value_parser.o:	key_value_parser.h
 
 bin/test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile ${BIN}
-	$(CC) ${MYCFLAGS} -DTEST_KEY_VALUE_PARSER -o bin/test_key_value_parser key_value_parser.c
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_KEY_VALUE_PARSER -o $@ key_value_parser.c
 
 bin/test-matrix:	matrix.c Makefile ${BIN}
-	$(CC) ${MYCFLAGS} -DTEST_MATRIX -o bin/test-matrix matrix.c -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_MATRIX -o $@ matrix.c -lm
 
 bin/test-mathutils:	mathutils.c mathutils.h Makefile ${BIN} ${OD}/mtwist.o
-	$(CC) ${MYCFLAGS} -DTEST_MATHUTILS -o bin/test-mathutils mathutils.c ${OD}/mtwist.o -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_MATHUTILS -o $@ mathutils.c ${OD}/mtwist.o -lm
 
 bin/test_stringutils:	test_stringutils.c Makefile ${BIN} ${ODT} ${OD}/string-utils.o ${OD}/stacktrace.o
-	$(CC) ${MYCFLAGS} -g -o bin/test_stringutils test_stringutils.c ${OD}/string-utils.o ${OD}/stacktrace.o
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ test_stringutils.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test-space-partition:	space-part.c Makefile ${BIN}
-	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o bin/test-space-partition space-part.c -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_SPACE_PARTITION -o $@ space-part.c -lm
 
 $(OD)/snis_hash.o:	snis_hash.h
 
@@ -1095,7 +1095,7 @@ test_snis_crypt:	snis_hash.c snis_hash.h
 	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c ${CRYPTLIBS}
 
 bin/test_marshal:	snis_marshal.c snis_marshal.h ${OD}/stacktrace.o ${OD}/string-utils.o Makefile ${BIN}
-	$(CC) ${BOUNDSFLAGS} -DTEST_MARSHAL -o bin/test_marshal ${OD}/stacktrace.o snis_marshal.c ${OD}/string-utils.o -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_MARSHAL -o $@ ${OD}/stacktrace.o snis_marshal.c ${OD}/string-utils.o -lm
 
 $(OD)/snis_nl.o:	snis_nl.h
 
@@ -1149,13 +1149,13 @@ mostly-clean:
 	( cd mikktspace && ${MAKE} clean )
 
 bin/test-quat:	test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) ${BOUNDSFLAGS} -Wall -Wextra --pedantic -o bin/test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
 
 bin/test-fleet:	fleet.c fleet.h ${OD}/quat.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) ${BOUNDSFLAGS} -DTESTFLEET=1 -o bin/test-fleet fleet.c ${OD}/mathutils.o ${OD}/quat.o ${OD}/mtwist.o -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTESTFLEET=1 -o $@ fleet.c ${OD}/mathutils.o ${OD}/quat.o ${OD}/mtwist.o -lm
 
 bin/test-mtwist: ${OD}/mtwist.o test-mtwist.c Makefile ${BIN}
-	$(CC) ${BOUNDSFLAGS} -o bin/test-mtwist ${OD}/mtwist.o test-mtwist.c
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${OD}/mtwist.o test-mtwist.c
 
 $(OD)/snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile ${ODT}
 	$(CC) -Wall -Wextra --pedantic -pthread -c -o ${OD}/snis-device-io.o snis-device-io.c
@@ -1182,10 +1182,10 @@ bin/snis-console:	${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o $
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.h
 
 bin/test_nonuniform_random_sampler:	nonuniform_random_sampler.c ${OD}/mathutils.o ${OD}/mtwist.o ${BIN}
-	$(CC) ${BOUNDSFLAGS} -DTEST_NONUNIFORM_SAMPLER -o bin/test_nonuniform_random_sampler nonuniform_random_sampler.c ${OD}/mtwist.o ${OD}/mathutils.o -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_NONUNIFORM_SAMPLER -o $@ nonuniform_random_sampler.c ${OD}/mtwist.o ${OD}/mathutils.o -lm
 
 bin/test-commodities:	commodities.c commodities.h Makefile ${OD}/string-utils.o ${BIN} ${OD}/stacktrace.o
-	$(CC) ${BOUNDSFLAGS} -DTESTCOMMODITIES=1 -O3 -o bin/test-commodities commodities.c ${OD}/string-utils.o ${OD}/stacktrace.o
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTESTCOMMODITIES=1 -o $@ commodities.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mesh.o \
 		${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o Makefile ${BIN}
@@ -1208,13 +1208,13 @@ MESH_FRACTURE_TEST_OBJS=${OD}/mesh_fracture.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/
 	${OD}/matrix.o ${OD}/graph_dev_mesh_stub.o ${OD}/open-simplex-noise.o mikktspace/mikktspace.o
 
 bin/test_mesh_fracture:	test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} Makefile ${BIN}
-	$(CC) ${BOUNDSFLAGS} -Wall -Wextra -o $@ test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} -lm
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} -lm
 
 bin/test_wled:	test_wled.c ${OD}/snis_wled.o Makefile ${BIN}
-	$(CC) ${BOUNDSFLAGS} -Wall -Wextra -I. -o $@ test_wled.c ${OD}/snis_wled.o
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ test_wled.c ${OD}/snis_wled.o
 
 bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
-	$(CC) ${BOUNDSFLAGS} -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test_crater:	$(OD)/test_crater.o $(OD)/crater.o $(OD)/mathutils.o $(OD)/mtwist.o ${OD}/png_utils.o ${BIN}
 	$(CC) ${BOUNDSFLAGS} -o $@ ${PNGCFLAGS} $(OD)/test_crater.o $(OD)/crater.o $(OD)/mtwist.o ${OD}/png_utils.o ${PNGLIBS} $(OD)/mathutils.o -lm

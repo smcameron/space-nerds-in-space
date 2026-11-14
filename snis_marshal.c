@@ -1012,11 +1012,10 @@ static void test_bit_fields(int *failures)
 	*failures += err_count;
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 
 	float x;
-	int i, j;
 	int failures = 0;
 
 	for (x = -1.0; x <= 1.0; x += 0.0001) {
@@ -1032,7 +1031,6 @@ int main(int argc, char *argv[])
 
 	double angle, outangle;
 	int32_t min_diff, max_diff, diff;
-	uint8_t b[8];
 	max_diff = -100000;
 	min_diff = 100000;
 	uint32_t last_value = 0x7fffffff;

@@ -75,12 +75,11 @@ int nonuniform_sample(struct nonuniform_sample_distribution *d)
 
 #include <sys/time.h>
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	struct nonuniform_sample_distribution *d;
 	struct timeval now;
 	int i, x;
-	uint32_t seed;
 	int a = 70000;
 	int b = 20000;
 	int c = 10000;

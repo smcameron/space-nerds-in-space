@@ -160,7 +160,7 @@ static void print_transport_contract(struct transport_contract *tc)
 	printf("Loaded: %d\n", tc->loaded);
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	int i, ncommodities;
 	struct mtwist_state *mt = mtwist_init(78238423);

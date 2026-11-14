@@ -493,26 +493,26 @@ int main(int argc, char *argv[])
 					sum += test_price(&c[i], e, g, t);
 
 	for (i = 0; i < ncategories; i++) {
-		int j;
-		struct commodity c;
-		c.category = i;
-		c.base_price = 1.0;
+		size_t j;
+		struct commodity tc;
+		tc.category = i;
+		tc.base_price = 1.0;
 		for (j = 0; j < ARRAYSIZE(economy_name); j++) {
 			e = (float) j / (float) ARRAYSIZE(economy_name);
 			printf("%s that normally costs $1.00 would cost %f in economy %s\n",
-					category[i], commodity_calculate_price(&c, e, 0.5, 0.5), economy_name[j]);
+					category[i], commodity_calculate_price(&tc, e, 0.5, 0.5), economy_name[j]);
 		}
 		printf("------------------------\n");
 		for (j = 0; j < ARRAYSIZE(government_name); j++) {
 			g = (float) j / (float) ARRAYSIZE(government_name);
 			printf("%s that normally costs $1.00 would cost %f in government %s\n",
-					category[i], commodity_calculate_price(&c, 0.5, g, 0.5), government_name[j]);
+					category[i], commodity_calculate_price(&tc, 0.5, g, 0.5), government_name[j]);
 		}
 		printf("------------------------\n");
 		for (j = 0; j < ARRAYSIZE(tech_level_name); j++) {
 			t = (float) j / (float) ARRAYSIZE(tech_level_name);
 			printf("%s that normally costs $1.00 would cost %f in tech level %s\n",
-					category[i], commodity_calculate_price(&c, 0.5, 0.5, t), tech_level_name[j]);
+					category[i], commodity_calculate_price(&tc, 0.5, 0.5, t), tech_level_name[j]);
 		}
 		printf("========================\n");
 	}
