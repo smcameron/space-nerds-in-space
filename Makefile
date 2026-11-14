@@ -1255,10 +1255,15 @@ $(OD)/ssgl_%.o:	ssgl/ssgl_%.c Makefile ${ODT}
 $(OD)/libssglclient.a:	$(patsubst %,$(OD)/%,${_SSGLWEBOBJS})
 	$(Q)$(ECHO) '  ARCHIVE' $@ && emar -cr $@ $^
 
+.PHONY:	web web-assets web-update-assets
+
+ifeq (${WEB},0)
+web web-assets web-update-assets:
+	@echo "You probably meant: make WEB=1 $@" 1>&2
+	@/bin/false
+else
 # The browser client: bin/web/snis_client.{html,js,wasm,data}
 web:	bin/web/snis_client.js bin/web/snis_client.html
-
-.PHONY:	web web-assets web-update-assets
 
 # snis_update_assets runs natively, so build it without WEB=1.
 ${WEB_ASSET_STAMP}:
@@ -1302,6 +1307,7 @@ bin/web/snis_client.js:	${CLIENTOBJS} ${SSGL} Makefile web-assets ${OPUSARCHIVE}
 bin/web/snis_client.html:	snis_client_web.html
 	@mkdir -p bin/web
 	@cp $< $@
+endif
 
 $(OD)/snis_marshal.o:	snis_marshal.c Makefile ${ODT}
 	$(Q)$(COMPILE)
