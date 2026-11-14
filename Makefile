@@ -472,7 +472,10 @@ UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_
 TESTPROGS=bin/test-matrix bin/test-mathutils bin/test-space-partition \
 		bin/test_marshal bin/test-quat bin/test-fleet bin/test-mtwist \
 		bin/test-commodities bin/test_solarsystem_config \
-		bin/test_mesh_fracture bin/test_wled
+		bin/test_mesh_fracture bin/test_wled \
+		bin/test_key_value_parser bin/test_stringutils \
+		bin/test_transport_contract bin/test_snis_ship_type \
+		bin/test_nonuniform_random_sampler
 FUZZPROGS=fuzz_obj_parser fuzz_snis_read_ship_types \
 		fuzz_solarsystem_asset_spec_read fuzz_read_thrust_attachments \
 		fuzz_process_manifest fuzz_read_joystick_config \
@@ -1122,15 +1125,14 @@ mostly-clean:
 	stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h \
 	bin/names bin/infinite-taunt bin/stl_parser \
-	bin/test-obj-parser bin/test_nonuniform_random_sampler \
+	bin/test-obj-parser \
 	bin/snis-device-io-sample-1 bin/check-endianness \
 	${OD}/*.o ${ODT} \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
-	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
+	bin/test_snis_dmx test_scipher wwviaudio_basic_test \
 	wwviaudio_recording_test a_star_test a_star_test.o a_star.o test_xdg_base_dir test_pronunciation \
 	test_planetary_atmosphere test_snis_crypt snis_nl spelled_numbers \
 	$(filter %.gz,${MAN1PAGES} ${MAN6PAGES}) \
-	bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program build_info.h ${METAINFOFILE} \
 	solarsystem_config_test bin/check-endianness.wasm
 	rm -fr bin/web
@@ -1191,8 +1193,16 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o \
 		test-obj-parser.c -lm
 
+.PHONY:	test
 test:	${TESTPROGS}
-	/bin/true	# Prevent make from running "$(CC) test.o".
+	@for t in ${TESTPROGS}; do \
+		echo "  TEST" $$t; \
+		if [ "${V}" = "1" ]; then \
+			./$$t || exit 1; \
+		else \
+			./$$t > /dev/null || exit 1; \
+		fi; \
+	done
 
 MESH_FRACTURE_TEST_OBJS=${OD}/mesh_fracture.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/mathutils.o ${OD}/quat.o \
 	${OD}/matrix.o ${OD}/graph_dev_mesh_stub.o ${OD}/open-simplex-noise.o mikktspace/mikktspace.o
