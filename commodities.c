@@ -475,17 +475,14 @@ static void test_flatten_commodities(struct commodity *c, int ncommodities)
 int main(int argc, char *argv[])
 {
 	struct commodity *c;
+	char *filename = argc > 1 ? argv[1] : "share/snis/commodities.txt";
 	float e, g, t;
 	int i, ncommodities;
 	int sum = 0;
 
-	if (argc < 2) {
-		fprintf(stderr, "usage: test-commodities commodities-file\n");
-		return 1;
-	}
-	c = read_commodities(argv[1], &ncommodities);
+	c = read_commodities(filename, &ncommodities);
 	if (!c) {
-		fprintf(stderr, "Failed to read commodities file %s\n", argv[1]);
+		fprintf(stderr, "Failed to read commodities file %s\n", filename);
 		return 1;
 	}
 
@@ -520,8 +517,9 @@ int main(int argc, char *argv[])
 		printf("========================\n");
 	}
 	test_flatten_commodities(c, ncommodities);
+	free(c);
 	if (sum)
 		printf("%d price failures\n", sum);
-	return sum;
+	return sum != 0;
 }
 #endif

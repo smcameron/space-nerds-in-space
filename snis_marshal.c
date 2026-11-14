@@ -1020,11 +1020,11 @@ int main(int argc, char *argv[])
 	int failures = 0;
 
 	for (x = -1.0; x <= 1.0; x += 0.0001) {
-		printf("Qtos32(%f) = %d\n", x, Qtos32(x));
-		printf("s32toQ(%f) = %f\n", x, s32toQ(x));
-		printf("s32toQ(Qtos32(%f) = %f\n", x, s32toQ(Qtos32(x)));
-		printf("Qtos32(s32toQ(%f) = %d\n", x, Qtos32(s32toQ(x)));
 		if (fabs(s32toQ(Qtos32(x)) - x) > 0.00001) {
+			printf("Qtos32(%f) = %d\n", x, Qtos32(x));
+			printf("s32toQ(%f) = %f\n", x, s32toQ(x));
+			printf("s32toQ(Qtos32(%f) = %f\n", x, s32toQ(Qtos32(x)));
+			printf("Qtos32(s32toQ(%f) = %d\n", x, Qtos32(s32toQ(x)));
 			printf("FAIL!!!\n");
 			failures++;
 		}

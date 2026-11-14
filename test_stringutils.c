@@ -244,5 +244,5 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 	else
 		printf("%d/%d tests failed, %d/%d tests passed.\n",
 			tests_failed, total_tests, tests_passed, total_tests);
-	return 0;
+	return tests_failed != 0;
 }

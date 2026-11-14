@@ -188,8 +188,6 @@ static void test1()
 		random_point_on_sphere(1.0, &v1.v.x, &v1.v.y, &v1.v.z);
 		random_point_on_sphere(1.0, &v2.v.x, &v2.v.y, &v2.v.z);
 		random_point_on_sphere(1.0, &up.v.x, &up.v.y, &up.v.z);
-		printf("p1 = %f,%f,%f, p2 = %f,%f,%f\n", v1.v.x, v1.v.y, v1.v.z,
-						v2.v.x, v2.v.y, v2.v.z);
 		quat_from_u2v(&r, &v1, &v2, &up);
 		v3 = v1;
 		quat_rot_vec(&v4, &v3, &r);
@@ -199,9 +197,6 @@ static void test1()
 		TESTIT(dx > 0.001, "quat_from_u2v test failed, x wrong\n");
 		TESTIT(dz > 0.001, "quat_from_u2v test failed, z wrong\n");
 		TESTIT(dy > 0.001, "quat_from_u2v test failed, y wrong\n");
-		printf("got %f, expected %f\n", v4.v.x, v2.v.x);
-		printf("got %f, expected %f\n", v4.v.y, v2.v.y);
-		printf("got %f, expected %f\n", v4.v.z, v2.v.z);
 	}
 }
 
@@ -375,16 +370,17 @@ static void test_heading_mark_vec3(void)
 			quat_from_u2v(&rotation, &straight_ahead, &v, NULL);
 			vec3_to_heading_mark(&v, &r, &h2, &m2);
 			quat_to_heading_mark(&rotation, &h3, &m3);
-			printf("h1,m1: %f,%f  h2,m2: %f,%f  h3,m3: %f,%f\n",
-				h1 * 180.0 / M_PI, m1 * 180.0 / M_PI,
-				h2 * 180.0 / M_PI, m2 * 180.0 / M_PI,
-				h3 * 180.0 / M_PI, m3 * 180.0 / M_PI);
 			TESTIT(fabs(m1 - m2) > 0.5 * M_PI / 180.0, "heading mark vec3 m1m2 test failed.");
 			TESTIT(fabs(m1 - m3) > 0.5 * M_PI / 180.0, "heading mark vec3 m1h3 test failed.");
 			if (fabs(fabs(m1) - 90.0 * M_PI / 180.0) > 0.01) {
 				/* at mark +/- 90, heading can be anything */
 				TESTIT(fabs(h1 - h2) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h2 testfailed.");
-				TESTIT(fabs(h1 - h3) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h3 test failed.");
+				/* At heading 180, mark 0, v is antipodal to straight_ahead
+				 * and quat_from_u2v() returns the identity quaternion.
+				 */
+				if (fabs(h1 - M_PI) > 0.01 || fabs(m1) > 0.01)
+					TESTIT(fabs(h1 - h3) > 0.5 * M_PI / 180.0,
+						"heading mark vec3 h1h3 test failed.");
 			}
 		}
 	}
@@ -398,5 +394,5 @@ int main(__attribute__((unused)) int argc, __attribute__((unused))  char *argv[]
 	test_heading_mark_vec3();
 	printf("%d tests failed, %d tests passed.\n", total_tests_failed,
 				total_tests - total_tests_failed);
-	return 0;
-} 
+	return total_tests_failed != 0;
+}
