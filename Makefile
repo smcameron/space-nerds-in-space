@@ -684,8 +684,8 @@ X11CFLAGS=$(shell $(PKG_CONFIG) --cflags x11)
 
 SSGL=ssgl/libssglclient.a
 LIBS=${GLADLIBS} -Lssgl -lssglclient -ldl -lm ${PNGLIBS}
-SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} ${CRYPTLIBS}
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
+SERVERLIBS=${MULTIVERSELIBS} ${LUALIBS}
 #
 # NOTE: if you get
 #
@@ -898,9 +898,7 @@ SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLA
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
 CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${X11LIBS} ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS} ${X11LIBS}
-SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
-SHADOWLABLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SHADOWLABOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
-STARLIGHTPREVIEWLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${STARLIGHTPREVIEWOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
+VIEWERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} $(filter %.o,$^) ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
 NEBULANOISELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${NEBULANOISEOBJS} ${NEBULANOISELIBS} $(LDFLAGS)
@@ -913,15 +911,10 @@ _ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o png_utils.o crater.o pt
 ELOBJS=$(patsubst %,$(OD)/%, ${_ELOBJS})
 ELLIBS=-lm ${LRTLIB} -lpng
 ELLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${OD}/earthlike.o ${ELOBJS} ${ELLIBS} $(LDFLAGS)
-MCLIBS=-lm ${LRTLIB} -lpng
+MCLIBS=${ELLIBS}
 _MCOBJS=png_utils.o
 MCOBJS=$(patsubst %,$(OD)/%, ${_MCOBJS})
-MCLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ util/mask_clouds.o ${MCOBJS} ${MCLIBS} $(LDFLAGS)
-
-CMNMLIBS=-lm ${LRTLIB} -lpng
-_CMNMOBJS=png_utils.o
-CMNMOBJS=$(patsubst %,$(OD)/%, ${_CMNMOBJS})
-CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
+MCLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ $(filter %.o,$^) ${MCLIBS} $(LDFLAGS)
 
 all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES} ${METAINFOFILE}
 
@@ -1385,13 +1378,13 @@ bin/snis_text_to_speech.sh:	snis_text_to_speech.sh ${BIN}
 	@chmod +x bin/snis_text_to_speech.sh
 
 bin/mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile ${BIN}
-	$(Q)$(SDLCLIENTLINK)
+	$(Q)$(VIEWERLINK)
 
 bin/shadow_lab:	${SHADOWLABOBJS} ${SSGL} Makefile ${BIN}
-	$(Q)$(SHADOWLABLINK)
+	$(Q)$(VIEWERLINK)
 
 bin/star_light_preview:	${STARLIGHTPREVIEWOBJS} ${SSGL} Makefile ${BIN}
-	$(Q)$(STARLIGHTPREVIEWLINK)
+	$(Q)$(VIEWERLINK)
 
 bin/earthlike:	${OD}/earthlike.o ${ELOBJS} Makefile ${BIN}
 	$(Q)$(ELLINK)
@@ -1399,8 +1392,8 @@ bin/earthlike:	${OD}/earthlike.o ${ELOBJS} Makefile ${BIN}
 util/mask_clouds:	util/mask_clouds.o ${MCOBJS} Makefile
 	$(Q)$(MCLINK)
 
-util/cloud-mask-normalmap:	util/cloud-mask-normalmap.o ${CMNMOBJS} Makefile
-	$(Q)$(CMNMLINK)
+util/cloud-mask-normalmap:	util/cloud-mask-normalmap.o ${MCOBJS} Makefile
+	$(Q)$(MCLINK)
 
 $(OD)/starbase-comms.o:	starbase-comms.c Makefile ${ODT}
 	$(Q)$(COMPILE)
