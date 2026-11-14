@@ -469,6 +469,15 @@ BINPROGS=${SERVERPROGS} bin/snis_client bin/snis_text_to_speech.sh \
 		bin/snis_update_assets bin/update_assets_from_launcher.sh bin/snis_web_gateway
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_lab bin/star_light_preview util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
+TESTPROGS=bin/test-matrix bin/test-mathutils bin/test-space-partition \
+		bin/test_marshal bin/test-quat bin/test-fleet bin/test-mtwist \
+		bin/test-commodities bin/test_solarsystem_config \
+		bin/test_mesh_fracture bin/test_wled
+FUZZPROGS=fuzz_obj_parser fuzz_snis_read_ship_types \
+		fuzz_solarsystem_asset_spec_read fuzz_read_thrust_attachments \
+		fuzz_process_manifest fuzz_read_joystick_config \
+		fuzz_read_commodities fuzz_read_starbase_metadata \
+		fuzz_read_docking_port_attachments
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -1108,20 +1117,18 @@ mikktspace/mikktspace.o:
 
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${MULTIVERSEOBJS} ${SDLCLIENTOBJS} ${SSGL} \
-	${BINPROGS} ${UTILPROGS} ${ELOBJS} stl_parser snis_limited_client.c \
+	${BINPROGS} ${UTILPROGS} ${TESTPROGS} ${FUZZPROGS} ${ELOBJS} \
+	stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h \
-	bin/nebula_noise bin/generate_skybox bin/names bin/infinite-taunt bin/stl_parser \
-	bin/test-obj-parser bin/test-commodities bin/test_nonuniform_random_sampler bin/test_marshal \
-	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
-	bin/test_wled bin/test_mesh_fracture \
-	${OD}/*.o ${ODT} bin/test-matrix bin/test-mathutils bin/test_solarsystem_config  bin/test-space-partition \
+	bin/names bin/infinite-taunt bin/stl_parser \
+	bin/test-obj-parser bin/test_nonuniform_random_sampler \
+	bin/snis-device-io-sample-1 bin/check-endianness \
+	${OD}/*.o ${ODT} \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
-	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
-	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
-	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
-	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
-	fuzz_read_commodities fuzz_read_starbase_metadata fuzz_read_docking_port_attachments ${METAINFOFILE} \
+	$(filter %.gz,${MAN1PAGES} ${MAN6PAGES}) \
+	bin/test_transport_contract bin/test_stringutils \
+	bin/yoke-test-program build_info.h ${METAINFOFILE} \
 	solarsystem_config_test bin/check-endianness.wasm
 	rm -fr bin/web
 	rm -f ${BIN}
@@ -1183,8 +1190,7 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o \
 		-lm test-obj-parser.c
 
-test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test_marshal bin/test-quat bin/test-fleet \
-	bin/test-mtwist bin/test-commodities bin/test_solarsystem_config bin/test_mesh_fracture bin/test_wled
+test:	${TESTPROGS}
 	/bin/true	# Prevent make from running "$(CC) test.o".
 
 MESH_FRACTURE_TEST_OBJS=${OD}/mesh_fracture.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/mathutils.o ${OD}/quat.o \
