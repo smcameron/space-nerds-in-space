@@ -680,56 +680,62 @@ build:	all
 
 utils:	${UTILPROGS}
 
-$(OD)/rootcheck.o:	rootcheck.c rootcheck.h Makefile ${ODT}
+_SDLCOMPILE_OBJS=graph_dev_opengl.o opengl_cap.o graph_dev_gles.o gles_cap.o \
+	material.o snis_keyboard.o joystick_web.o mesh_viewer.o shadow_lab.o \
+	star_light_preview.o black_hole_lens.o snis_graph.o snis_typeface.o \
+	snis_gauge.o snis_button.o snis_pull_down_menu.o snis_strip_chart.o \
+	snis_label.o snis_sliders.o snis_text_window.o snis_ui_element.o \
+	snis_text_input.o entity.o
+SDLCOMPILE_OBJS=$(patsubst %,$(OD)/%,${_SDLCOMPILE_OBJS})
+
+_VORBISCOMPILE_OBJS=ogg_to_pcm.o wwviaudio.o snis_test_audio.o
+VORBISCOMPILE_OBJS=$(patsubst %,$(OD)/%,${_VORBISCOMPILE_OBJS})
+
+$(OD)/%.o:	%.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-$(OD)/graph_dev_opengl.o : graph_dev_opengl.c graph_dev.h shader.h vertex.h triangle.h \
-		mtwist.h mathutils.h matrix.h quat.h mesh.h vec4.h snis_graph.h graph_dev.h \
-		material.h entity.h entity_private.h snis_typeface.h opengl_cap.h png_utils.h \
-		Makefile ${ODT}
+$(OD)/graph_dev_%.o:	graph_dev/%.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
+
+$(SDLCOMPILE_OBJS): $(OD)/%.o:	%.c Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
+$(VORBISCOMPILE_OBJS): $(OD)/%.o:	%.c Makefile ${ODT}
+	$(Q)$(VORBISCOMPILE)
+
+$(OD)/rootcheck.o:	rootcheck.h
+
+$(OD)/graph_dev_opengl.o: graph_dev.h shader.h vertex.h triangle.h \
+		mtwist.h mathutils.h matrix.h quat.h mesh.h vec4.h snis_graph.h graph_dev.h \
+		material.h entity.h entity_private.h snis_typeface.h opengl_cap.h png_utils.h
 
 # The texture cache, shared by both graph_dev backends.  Built with the same flags as
 # whichever one is in use, since USE_GLES decides which glad header it picks up.
-$(OD)/graph_dev_texture_cache.o : graph_dev/texture_cache.c graph_dev/texture_cache.h \
-		graph_dev.h png_utils.h snis_graph.h workqueue.h string-utils.h \
-		Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/graph_dev_texture_cache.o: graph_dev/texture_cache.h \
+		graph_dev.h png_utils.h snis_graph.h workqueue.h string-utils.h
 
 # The mesh cache, likewise.  Same reasoning, same flags.
-$(OD)/graph_dev_mesh_cache.o : graph_dev/mesh_cache.c graph_dev/mesh_cache.h mesh.h \
-		vertex.h triangle.h quat.h opengl_cap.h snis_profile.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/graph_dev_mesh_cache.o: graph_dev/mesh_cache.h mesh.h \
+		vertex.h triangle.h quat.h opengl_cap.h snis_profile.h
 
 # The shader setup that is the same on both GL versions.
-$(OD)/graph_dev_shader_setup.o : graph_dev/shader_setup.c graph_dev/shader_setup.h \
-		graph_dev/context.h shader.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/graph_dev_shader_setup.o: graph_dev/shader_setup.h \
+		graph_dev/context.h shader.h
 
 # The shared renderer context and the 2D drawing that needs only it.
-$(OD)/graph_dev_context.o : graph_dev/context.c graph_dev/context.h graph_dev.h \
+$(OD)/graph_dev_context.o: graph_dev/context.h graph_dev.h \
 		graph_dev/mesh_cache.h snis_graph.h star_light.h material.h entity.h \
-		entity_private.h matrix.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+		entity_private.h matrix.h
 
-$(OD)/opengl_cap.o : opengl_cap.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/graph_dev_gles.o : graph_dev_gles.c graph_dev.h shader.h vertex.h triangle.h \
+$(OD)/graph_dev_gles.o: graph_dev.h shader.h vertex.h triangle.h \
 		mtwist.h mathutils.h matrix.h quat.h mesh.h vec4.h snis_graph.h graph_dev.h \
 		material.h entity.h entity_private.h snis_typeface.h opengl_cap.h png_utils.h \
-		graph_dev/texture_cache.h graph_dev/mesh_cache.h graph_dev/context.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+		graph_dev/texture_cache.h graph_dev/mesh_cache.h graph_dev/context.h
 
-$(OD)/gles_cap.o : gles_cap.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/graph_dev_mesh_stub.o:	graph_dev_mesh_stub.h
 
-$(OD)/graph_dev_mesh_stub.o:	graph_dev_mesh_stub.c graph_dev_mesh_stub.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/material.o: material.c mtwist.h quat.h snis_graph.h material.h star_light.h \
-			graph_dev.h build_bug_on.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/material.o: mtwist.h quat.h snis_graph.h material.h star_light.h \
+			graph_dev.h build_bug_on.h
 
 $(OD)/shader.o : shader.c Makefile ${ODT}
 	$(Q)$(COMPILE) ${GLADCFLAGS}
@@ -749,50 +755,21 @@ $(OD)/glad-gles2.o:	extern/glad-es/src/gles2.c
 $(OD)/glad-gl.o:	extern/glad/src/gl.c
 	$(Q)$(COMPILE) -Iextern/glad/include
 
-$(OD)/thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/docking_port.o:	docking_port.c docking_port.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_licenses.o:	snis_licenses.c snis_licenses.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/net_utils.o:	net_utils.c net_utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_keyboard.o:	snis_keyboard.c snis_keyboard.h ${OD}/string-utils.o xdg_base_dir_spec.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_preferences.o:	snis_preferences.c snis_preferences.h string-utils.h snis_packet.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/solarsystem_config.o:	solarsystem_config.c solarsystem_config.h string-utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/thrust_attachment.o:	thrust_attachment.h
+$(OD)/docking_port.o:	docking_port.h
+$(OD)/snis_licenses.o:	snis_licenses.h
+$(OD)/net_utils.o:	net_utils.h
+$(OD)/ui_colors.o:	ui_colors.h snis_graph.h
+$(OD)/snis_keyboard.o:	snis_keyboard.h ${OD}/string-utils.o xdg_base_dir_spec.h
+$(OD)/snis_preferences.o:	snis_preferences.h string-utils.h snis_packet.h
+$(OD)/solarsystem_config.o:	solarsystem_config.h string-utils.h
 
 solarsystem_config_test: solarsystem_config.c ${OD}/string-utils.o ${ODT} ${OD}/stacktrace.o
 	$(CC) ${MYCFLAGS} -DSOLARSYSTEM_CONFIG_TEST=1 -o $@ solarsystem_config.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
-$(OD)/my_point.o:   my_point.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/mesh.o:   mesh.c mikktspace/mikktspace.h open-simplex-noise.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/pthread_util.o:	pthread_util.c pthread_util.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/power-model.o:   power-model.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/stacktrace.o:   stacktrace.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h quat.h corporations.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/mesh.o:	mikktspace/mikktspace.h open-simplex-noise.h
+$(OD)/pthread_util.o:	pthread_util.h
+$(OD)/snis_ship_type.o:	snis_ship_type.h quat.h corporations.h
 
 bin/snis_launcher:	snis_launcher
 bin/update_assets_from_launcher.sh:	util/update_assets_from_launcher.sh
@@ -803,32 +780,13 @@ bin/snis_launcher bin/update_assets_from_launcher.sh:
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h quat.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o -lm
 
-$(OD)/snis_faction.o:   snis_faction.c string-utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/liang-barsky.o:   liang-barsky.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/joystick.o:   joystick.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/joystick_web.o:   joystick_web.c joystick.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/snis_faction.o:	string-utils.h
+$(OD)/joystick_web.o:	joystick.h
 
 joystick_test:	joystick.c joystick.h Makefile
 	$(CC) -g -DJOYSTICK_TEST -o joystick_test joystick.c
 
-$(OD)/joystick_config.o:	joystick_config.c joystick_config.h string-utils.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/ogg_to_pcm.o:   ogg_to_pcm.c Makefile ${ODT}
-	$(Q)$(VORBISCOMPILE)
-
-$(OD)/bline.o:	bline.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/wwviaudio.o:    wwviaudio.c Makefile ${ODT}
-	$(Q)$(VORBISCOMPILE)
+$(OD)/joystick_config.o:	joystick_config.h string-utils.h
 
 wwviaudio_basic_test:	wwviaudio.c wwviaudio.h ${OGGOBJ}
 	$(CC) ${MYCFLAGS} -DWWVIAUDIO_BASIC_TEST -DDATADIR=\".\" -o wwviaudio_basic_test wwviaudio.c ${OGGOBJ} ${SNDLIBS}
@@ -836,58 +794,33 @@ wwviaudio_basic_test:	wwviaudio.c wwviaudio.h ${OGGOBJ}
 wwviaudio_recording_test:	wwviaudio.c wwviaudio.h ${OGGOBJ}
 	$(CC) ${MYCFLAGS} -DWWVIAUDIO_RECORDING_TEST -DDATADIR=\".\" -o wwviaudio_recording_test wwviaudio.c ${OGGOBJ} ${SNDLIBS}
 
-$(OD)/shield_strength.o:	shield_strength.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/planetary_properties.o:	planetary_properties.c planetary_properties.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_server.o:	snis_server.c Makefile build_info.h ${DOCKING_PORT_FILES} ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_multiverse.o:	snis_multiverse.c snis_multiverse.h Makefile build_info.h ${ODT} \
+$(OD)/planetary_properties.o:	planetary_properties.h
+$(OD)/snis_server.o:	build_info.h ${DOCKING_PORT_FILES}
+$(OD)/snis_multiverse.o:	snis_multiverse.h build_info.h \
 			snis_entity_key_value_specification.h
-	$(Q)$(COMPILE)
-
-$(OD)/snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread_util.h ${ODT} \
-			ssgl/ssgl.h Makefile
-	$(Q)$(COMPILE)
+$(OD)/snis_server_tracker.o:	snis_server_tracker.h pthread_util.h ssgl/ssgl.h
 
 $(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h snis_ui.h ${ODT}
 	$(Q)$(SDLCOMPILE) ${VCHAT}
 
-$(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/shadow_lab.o:	shadow_lab.c Makefile build_info.h ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/star_light_preview.o:	star_light_preview.c star_light.h Makefile build_info.h ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/star_light.o:	star_light.c star_light.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/mesh_viewer.o:	build_info.h
+$(OD)/shadow_lab.o:	build_info.h
+$(OD)/star_light_preview.o:	star_light.h build_info.h
+$(OD)/star_light.o:	star_light.h
 
 # simplexnoise1234.o:	simplexnoise1234.c Makefile build_info.h
 #	$(Q)$(COMPILE)
 
-$(OD)/open-simplex-noise.o:	open-simplex-noise.c Makefile build_info.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/nebula_noise.o:	nebula_noise.c png_utils.h open-simplex-noise.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/open-simplex-noise.o:	build_info.h
+$(OD)/nebula_noise.o:	png_utils.h open-simplex-noise.h
 
 bin/nebula_noise:	$(NEBULANOISEOBJS) ${BIN}
 	$(Q)$(NEBULANOISELINK)
 
-$(OD)/generate_skybox.o:	generate_skybox.c png_utils.h open-simplex-noise.h quat.h mtwist.h mathutils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/generate_skybox.o:	png_utils.h open-simplex-noise.h quat.h mtwist.h mathutils.h
 
 bin/generate_skybox:	$(GENERATE_SKYBOX_OBJS) ${BIN}
 	$(Q)$(GENERATE_SKYBOX_LINK)
-
-$(OD)/earthlike.o:	earthlike.c ${ODT}
-	$(Q)$(COMPILE)
 
 /util/mask_clouds.o:	util/mask_clouds.c
 	$(Q)$(COMPILE)
@@ -895,50 +828,25 @@ $(OD)/earthlike.o:	earthlike.c ${ODT}
 /util/cloud-mask-normalmap.o:	util/cloud-mask-normalmap.c
 	$(Q)$(COMPILE)
 
-$(OD)/util/sample_image_colors.o:	util/sample_image_colors.c ${OD}/png_utils.o ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/util/sample_image_colors.o:	${OD}/png_utils.o
 
 util/sample_image_colors:	util/sample_image_colors.o ${OD}/png_utils.o
 	$(CC) ${MYCFLAGS} -o $@ util/sample_image_colors.o ${OD}/png_utils.o ${PNGLIBS}
 
-$(OD)/util/generate_solarsystem_positions.o:	util/generate_solarsystem_positions.c ${OD}/string-utils.o ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/util/generate_solarsystem_positions.o:	${OD}/string-utils.o
 
 util/generate_solarsystem_positions:	util/generate_solarsystem_positions.o ${OD}/string-utils.o ${OD}/stacktrace.o
 	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o ${OD}/string-utils.o ${OD}/stacktrace.o -lm
 
-$(OD)/snis_socket_io.o:	snis_socket_io.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_net_transport.o:	snis_net_transport.c snis_net_transport.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_net_transport_web.o:	snis_net_transport_web.c snis_net_transport.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_main_loop.o:	snis_main_loop.c snis_main_loop.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_main_loop_web.o:	snis_main_loop_web.c snis_main_loop.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_web_stubs.o:	snis_web_stubs.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_asset_fetch.o:	snis_asset_fetch.c snis_asset_fetch.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_asset_fetch_web.o:	snis_asset_fetch_web.c snis_asset_fetch.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_speak.o:	snis_speak.c snis_speak.h snis_bin_dir.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_speak_web.o:	snis_speak_web.c snis_speak.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_web_ssgl.o:	snis_web_ssgl.c snis_net_transport.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/snis_net_transport.o:	snis_net_transport.h
+$(OD)/snis_net_transport_web.o:	snis_net_transport.h
+$(OD)/snis_main_loop.o:	snis_main_loop.h
+$(OD)/snis_main_loop_web.o:	snis_main_loop.h
+$(OD)/snis_asset_fetch.o:	snis_asset_fetch.h
+$(OD)/snis_asset_fetch_web.o:	snis_asset_fetch.h
+$(OD)/snis_speak.o:	snis_speak.h snis_bin_dir.h
+$(OD)/snis_speak_web.o:	snis_speak.h
+$(OD)/snis_web_ssgl.o:	snis_net_transport.h
 
 $(OD)/mikktspace.o:	mikktspace/mikktspace.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1003,65 +911,29 @@ bin/web/snis_client.html:	snis_client_web.html
 	@cp $< $@
 endif
 
-$(OD)/snis_marshal.o:	snis_marshal.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_opcode_def.o:	snis_opcode_def.c snis_opcode_def.h snis_packet.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/rts_unit_data.o:	rts_unit_data.c rts_unit_data.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_bridge_update_packet.o:	snis_bridge_update_packet.c snis_bridge_update_packet.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_font.o:	snis_font.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/mathutils.o:	mathutils.c Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/snis_opcode_def.o:	snis_opcode_def.h snis_packet.h
+$(OD)/rts_unit_data.o:	rts_unit_data.h
+$(OD)/snis_bridge_update_packet.o:	snis_bridge_update_packet.h
 
 # SDLCOMPILE because black_hole_lens.h includes graph_dev.h, for the lens struct it fills in,
 # and graph_dev.h pulls in SDL.h.
-$(OD)/black_hole_lens.o:	black_hole_lens.c black_hole_lens.h graph_dev.h quat.h mathutils.h ${ODT}
-	$(Q)$(SDLCOMPILE)
+$(OD)/black_hole_lens.o:	black_hole_lens.h graph_dev.h quat.h mathutils.h
 
 # Breaking a ship's hull into the pieces it leaves: see mesh_fracture.h.
-$(OD)/mesh_fracture.o:	mesh_fracture.c mesh_fracture.h mesh.h mtwist.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/mesh_fracture.o:	mesh_fracture.h mesh.h mtwist.h
 
 # Smoke, flame and sparks drawn as one mesh: see particle_batch.h.
-$(OD)/particle_batch.o:	particle_batch.c particle_batch.h mesh.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/particle_batch.o:	particle_batch.h mesh.h
 
 # A ship's death, and what it is made of: see ship_death.h.  None of them draws anything, so plain
 # COMPILE, clear of graph_dev.h and SDL.
-$(OD)/ship_death.o:	ship_death.c ship_death.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/ship_death_fireball.o:	ship_death_fireball.c ship_death_fireball.h ship_death.h material.h \
-				Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/ship_death_shrapnel.o:	ship_death_shrapnel.c ship_death_shrapnel.h ship_death_fireball.h \
-				ship_death.h particle_batch.h material.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/ship_death_wreck.o:	ship_death_wreck.c ship_death_wreck.h ship_death_fireball.h ship_death.h \
-				mesh_fracture.h particle_batch.h material.h star_light.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/crater.o:	crater.c crater.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/test_crater.o:	test_crater.c ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_alloc.o:	snis_alloc.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_damcon_systems.o:	snis_damcon_systems.c Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/ship_death.o:	ship_death.h
+$(OD)/ship_death_fireball.o:	ship_death_fireball.h ship_death.h material.h
+$(OD)/ship_death_shrapnel.o:	ship_death_shrapnel.h ship_death_fireball.h \
+				ship_death.h particle_batch.h material.h
+$(OD)/ship_death_wreck.o:	ship_death_wreck.h ship_death_fireball.h ship_death.h \
+				mesh_fracture.h particle_batch.h material.h star_light.h
+$(OD)/crater.o:	crater.h
 
 bin/snis_server:	${SERVEROBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(SERVERLINK)
@@ -1099,14 +971,8 @@ util/mask_clouds:	util/mask_clouds.o ${MCOBJS} Makefile
 util/cloud-mask-normalmap:	util/cloud-mask-normalmap.o ${MCOBJS} Makefile
 	$(Q)$(MCLINK)
 
-$(OD)/starbase-comms.o:	starbase-comms.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/starbase_metadata.o:	starbase_metadata.c starbase_metadata.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-${OD}/infinite-taunt.o:	infinite-taunt.c infinite-taunt.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/starbase_metadata.o:	starbase_metadata.h
+${OD}/infinite-taunt.o:	infinite-taunt.h
 
 bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/stacktrace.o Makefile ${BIN}
 	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c \
@@ -1115,62 +981,18 @@ bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o ${OD}/st
 bin/names:	names.c names.h ${OD}/mtwist.o ${BIN}
 	$(CC) -DTEST_NAMES -o bin/names ${MYCFLAGS} ${OD}/mtwist.o names.c
 
-$(OD)/snis_graph.o:	snis_graph.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/ship_registration.o:	ship_registration.c ship_registration.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/corporations.o:	corporations.c corporations.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_typeface.o:	snis_typeface.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_gauge.o:	snis_gauge.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_button.o:	snis_button.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_pull_down_menu.o:	snis_pull_down_menu.c snis_pull_down_menu.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_strip_chart.o:	snis_strip_chart.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_label.o:	snis_label.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_sliders.o:	snis_sliders.c snis_sliders.h ui_colors.h Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_text_window.o:	snis_text_window.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_ui_element.o:	snis_ui_element.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/snis_text_input.o:	snis_text_input.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/matrix.o:	matrix.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/starmap_adjacency.o:	starmap_adjacency.c starmap_adjacency.h $(OD)/quat.o $(OD)/vec4.o ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/ship_registration.o:	ship_registration.h
+$(OD)/corporations.o:	corporations.h
+$(OD)/snis_pull_down_menu.o:	snis_pull_down_menu.h
+$(OD)/snis_sliders.o:	snis_sliders.h ui_colors.h
+$(OD)/starmap_adjacency.o:	starmap_adjacency.h $(OD)/quat.o $(OD)/vec4.o
 
 $(OD)/snis_voice_chat.o:	snis_voice_chat.c snis_voice_chat.h pthread_util.h wwviaudio.h ${OPUSARCHIVE}
 	$(Q)$(COMPILE) ${VCHAT} ${OPUSCFLAGS}
 
-$(OD)/replacement_assets.o:	replacement_assets.c replacement_assets.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_asset_dir.o:	snis_asset_dir.c snis_asset_dir.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_bin_dir.o:	snis_bin_dir.c snis_bin_dir.h ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/replacement_assets.o:	replacement_assets.h
+$(OD)/snis_asset_dir.o:	snis_asset_dir.h
+$(OD)/snis_bin_dir.o:	snis_bin_dir.h
 
 $(OD)/stl_parser.o:	stl_parser.c Makefile ${ODT}
 	$(Q)$(COMPILE) ${SDLCFLAGS}
@@ -1183,53 +1005,19 @@ bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)
 		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o \
 		${OD}/stacktrace.o -lm $(LDFLAGS)
 
-$(OD)/entity.o:	entity.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/names.o:	names.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/space-part.o:	space-part.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/quat.o:	quat.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/oriented_bounding_box.o:	oriented_bounding_box.c oriented_bounding_box.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/shape_collision.o:	shape_collision.c shape_collision.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/turret_aimer.o:	turret_aimer.c turret_aimer.h quat.h mathutils.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/vec4.o:	vec4.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/arbitrary_spin.o:	arbitrary_spin.c arbitrary_spin.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/a_star.o:	a_star.c a_star.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/a_star_test.o:	a_star_test.c a_star.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/oriented_bounding_box.o:	oriented_bounding_box.h
+$(OD)/shape_collision.o:	shape_collision.h
+$(OD)/turret_aimer.o:	turret_aimer.h quat.h mathutils.h
+$(OD)/arbitrary_spin.o:	arbitrary_spin.h
+$(OD)/a_star.o:	a_star.h
+$(OD)/a_star_test.o:	a_star.h
 
 a_star_test:	a_star_test.o a_star.o Makefile
 	$(CC) -g -o a_star_test a_star_test.c a_star.o -lm
 
-$(OD)/mtwist.o:	mtwist.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/elastic_collision.o:	elastic_collision.c elastic_collision.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/talking_stick.o:	talking_stick.c talking_stick.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/transport_contract.o:	transport_contract.c transport_contract.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/elastic_collision.o:	elastic_collision.h
+$(OD)/talking_stick.o:	talking_stick.h
+$(OD)/transport_contract.o:	transport_contract.h
 
 bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/commodities.o \
 				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
@@ -1238,38 +1026,16 @@ bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/com
 			-o bin/test_transport_contract transport_contract.c \
 			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o
 
-$(OD)/fleet.o:	fleet.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
 $(OD)/png_utils.o:	png_utils.c png_utils.h Makefile ${ODT}
 	$(Q)$(COMPILE) ${PNGCFLAGS}
 
-$(OD)/workqueue.o:	workqueue.c workqueue.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/c-is-the-locale.o:	c-is-the-locale.c ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/commodities.o:	commodities.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/string-utils.o:	string-utils.c string-utils.h stacktrace.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/read_menu_file.o:	read_menu_file.c read_menu_file.h string-utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_client_forker.o:	snis_client_forker.c snis_client_forker.h string-utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_process_options.o:	snis_process_options.c snis_process_options.h string-utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/xdg_base_dir_spec.o:	xdg_base_dir_spec.c xdg_base_dir_spec.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_tweak.o: snis_tweak.c snis_tweak.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/workqueue.o:	workqueue.h
+$(OD)/string-utils.o:	string-utils.h stacktrace.h
+$(OD)/read_menu_file.o:	read_menu_file.h string-utils.h
+$(OD)/snis_client_forker.o:	snis_client_forker.h string-utils.h
+$(OD)/snis_process_options.o:	snis_process_options.h string-utils.h
+$(OD)/xdg_base_dir_spec.o:	xdg_base_dir_spec.h
+$(OD)/snis_tweak.o:	snis_tweak.h
 
 $(OD)/snis_client_debug.o: snis_debug.c snis_debug.h Makefile ${ODT}
 	$(Q)$(SNISCLIENTDBGCOMPILE)
@@ -1280,27 +1046,19 @@ $(OD)/snis_xwindows_hacks.o:	snis_xwindows_hacks.c snis_xwindows_hacks.h Makefil
 $(OD)/snis_server_debug.o: snis_debug.c snis_debug.h Makefile ${ODT}
 	$(Q)$(SNISSERVERDBGCOMPILE)
 
-$(OD)/pronunciation.o:	pronunciation.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
 test_xdg_base_dir:	xdg_base_dir_spec.c xdg_base_dir_spec.h Makefile
 	$(CC) -DTEST_XDG_BASE_DIR -o test_xdg_base_dir xdg_base_dir_spec.c
 
 test_pronunciation:	pronunciation.c Makefile
 	$(CC) -DTEST_PRONUNCIATION_FIXUP -o test_pronunciation pronunciation.c
 
-$(OD)/planetary_atmosphere.o:	planetary_atmosphere.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/planetary_ring_data.o:	planetary_ring_data.c planetary_ring_data.h mtwist.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/planetary_ring_data.o:	planetary_ring_data.h mtwist.h
 
 test_planetary_atmosphere:	planetary_atmosphere.c ${OD}/mtwist.o Makefile
 	$(CC) ${CFLAGS} ${UBSANFLAG} ${ASANFLAG} ${BOUNDSFLAGS} -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere \
 		planetary_atmosphere.c ${OD}/mtwist.o
 
-$(OD)/key_value_parser.o:	key_value_parser.c key_value_parser.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/key_value_parser.o:	key_value_parser.h
 
 bin/test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_KEY_VALUE_PARSER -o bin/test_key_value_parser key_value_parser.c
@@ -1318,11 +1076,7 @@ bin/test_stringutils:	test_stringutils.c Makefile ${BIN} ${ODT} ${OD}/string-uti
 bin/test-space-partition:	space-part.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o bin/test-space-partition space-part.c -lm
 
-$(OD)/snis_event_callback.o:	snis_event_callback.c Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_hash.o:	snis_hash.c snis_hash.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/snis_hash.o:	snis_hash.h
 
 test_snis_crypt:	snis_hash.c snis_hash.h
 	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c ${CRYPTLIBS}
@@ -1330,17 +1084,13 @@ test_snis_crypt:	snis_hash.c snis_hash.h
 bin/test_marshal:	snis_marshal.c snis_marshal.h stacktrace.o ${OD}/string-utils.o Makefile
 	$(CC) -DTEST_MARSHAL -o bin/test_marshal stacktrace.o snis_marshal.c ${OD}/string-utils.o
 
-$(OD)/snis_nl.o:	snis_nl.c snis_nl.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/snis_nl.o:	snis_nl.h
 
 snis_nl:	snis_nl.o ${OD}/string-utils.o ${OD}/spelled_numbers.o
 	$(CC) ${BOUNDSFLAGS} -g -DTEST_NL -o snis_nl ${OD}/string-utils.o ${OD}/spelled_numbers.o snis_nl.c
 
-$(OD)/spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/scipher.o:	scipher.c scipher.h mathutils.h
-	$(Q)$(COMPILE)
+$(OD)/spelled_numbers.o:	spelled_numbers.h
+$(OD)/scipher.o:	scipher.h mathutils.h
 
 test_scipher:	scipher.c scipher.h ${OD}/mathutils.o ${OD}/mtwist.o
 	$(CC) -g -fsanitize=address -DTEST_SCIPHER -o test_scipher scipher.c ${OD}/mathutils.o ${OD}/mtwist.o -lm
@@ -1418,8 +1168,7 @@ ${OD}/snis-console.o:	snis-console.c string-utils.h
 bin/snis-console:	${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
 	$(CC) -pthread -o bin/snis-console ${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o -lncurses
 
-$(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.h
 
 bin/test_nonuniform_random_sampler:	nonuniform_random_sampler.c ${OD}/mathutils.o ${OD}/mtwist.o ${BIN}
 	$(CC) -D TEST_NONUNIFORM_SAMPLER -o bin/test_nonuniform_random_sampler ${OD}/mtwist.o ${OD}/mathutils.o -lm nonuniform_random_sampler.c
@@ -1462,17 +1211,13 @@ bin/print_ship_attributes:	snis_entity_key_value_specification.h $(OD)/key_value
 local_termios2.h:	termios2.h
 	$(Q)./check_for_termios2.sh
 
-$(OD)/snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile local_termios2.h ${ODT}
-	$(Q)$(COMPILE)
-
-$(OD)/snis_wled.o:	snis_wled.c snis_wled.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+$(OD)/snis_dmx.o:	snis_dmx.h local_termios2.h
+$(OD)/snis_wled.o:	snis_wled.h
 
 bin/test_snis_dmx:	test_snis_dmx.c ${OD}/snis_dmx.o ${BIN}
 	$(Q)$(CC) -pthread -o bin/test_snis_dmx test_snis_dmx.c ${OD}/snis_dmx.o
 
-$(OD)/snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ} ${ODT}
-	$(Q)$(VORBISCOMPILE)
+$(OD)/snis_test_audio.o:	${SNDOBJS} ${OGGOBJ}
 
 bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN} ${OD}/mathutils.o ${OD}/mtwist.o
 	$(CC) ${MYCFLAGS} -o bin/snis_test_audio ${OD}/snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS} ${OD}/mathutils.o ${OD}/mtwist.o -lm -lbsd
