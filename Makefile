@@ -646,19 +646,12 @@ models:	${MODELS}
 # timestamp changes whenever the directory contents change, and we need to depend
 # only on the *existence* of the directory, not on the contents. Same for ${BIN}.
 ODT=${OD}/.t
-
-${ODT}:
-	@mkdir -p ${OD}
-	@if [ ! -f ${ODT} ] ; then \
-		touch ${ODT} ; \
-	fi
-
 BIN=bin/.t
 
-${BIN}:
-	@mkdir -p bin
-	@if [ ! -f ${BIN} ] ; then \
-		touch ${BIN}  ; \
+${ODT} ${BIN}:
+	@mkdir -p $(dir $@)
+	@if [ ! -f $@ ] ; then \
+		touch $@ ; \
 	fi
 
 # Rule to prevent common error of trying to "make foo" instead of "make bin/foo"
@@ -802,12 +795,10 @@ $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h quat.h corporations.
 	$(Q)$(COMPILE)
 
 bin/snis_launcher:	snis_launcher
-	./modify_snis_launcher.sh snis_launcher "${DESTDIR}" "${PREFIX}" > bin/snis_launcher
-	chmod +x bin/snis_launcher
-
 bin/update_assets_from_launcher.sh:	util/update_assets_from_launcher.sh
-	./modify_snis_launcher.sh util/update_assets_from_launcher.sh "${DESTDIR}" "${PREFIX}" > bin/update_assets_from_launcher.sh
-	chmod +x bin/update_assets_from_launcher.sh
+bin/snis_launcher bin/update_assets_from_launcher.sh:
+	./modify_snis_launcher.sh $< "${DESTDIR}" "${PREFIX}" > $@
+	chmod +x $@
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h quat.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o -lm
@@ -1081,15 +1072,10 @@ bin/snis_client:	${CLIENTOBJS} ${SDLCLIENTOBJS} ${SSGL} Makefile ${BIN} ${OPUSAR
 bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(MULTIVERSELINK)
 
-ssgl/lsssgl: ${SSGL}
+ssgl/lsssgl ssgl/ssgl_server: ${SSGL}
 
-ssgl/ssgl_server: ${SSGL}
-
-bin/ssgl_server: ${SSGL} ${BIN}
-	@cp ssgl/ssgl_server bin/ssgl_server 
-
-bin/lsssgl:	${SSGL} ${BIN}
-	@cp ssgl/lsssgl bin/lsssgl 
+bin/ssgl_server bin/lsssgl: ${SSGL} ${BIN}
+	@cp ssgl/$(notdir $@) $@
 
 bin/snis_text_to_speech.sh:	snis_text_to_speech.sh ${BIN}
 	@cp snis_text_to_speech.sh bin/snis_text_to_speech.sh
@@ -1467,17 +1453,8 @@ bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.
 bin/test_crater:	$(OD)/test_crater.o $(OD)/crater.o $(OD)/mathutils.o $(OD)/mtwist.o ${OD}/png_utils.o ${BIN}
 	$(CC) -o $@ ${PNGCFLAGS} $(OD)/test_crater.o $(OD)/crater.o $(OD)/mtwist.o ${OD}/png_utils.o ${PNGLIBS} $(OD)/mathutils.o -lm
 
-${MANSRCDIR}/snis_client.6.gz:	${MANSRCDIR}/snis_client.6
-	gzip -9 - < ${MANSRCDIR}/snis_client.6 > ${MANSRCDIR}/snis_client.6.gz
-
-${MANSRCDIR}/snis_server.6.gz:	${MANSRCDIR}/snis_server.6
-	gzip -9 - < ${MANSRCDIR}/snis_server.6 > ${MANSRCDIR}/snis_server.6.gz
-
-${MANSRCDIR}/earthlike.1.gz:	${MANSRCDIR}/earthlike.1
-	gzip -9 - < ${MANSRCDIR}/earthlike.1 > ${MANSRCDIR}/earthlike.1.gz
-
-${MANSRCDIR}/snis_test_audio.1.gz:	${MANSRCDIR}/snis_test_audio.1
-	gzip -9 - < ${MANSRCDIR}/snis_test_audio.1 > ${MANSRCDIR}/snis_test_audio.1.gz
+${MANSRCDIR}/%.gz:	${MANSRCDIR}/%
+	gzip -9 - < $< > $@
 
 bin/print_ship_attributes:	snis_entity_key_value_specification.h $(OD)/key_value_parser.o ${BIN}
 	$(CC) -o bin/print_ship_attributes print_ship_attributes.c $(OD)/key_value_parser.o
