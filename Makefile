@@ -666,10 +666,11 @@ ${ODT} ${BIN}:
 # Rule to prevent common error of trying to "make foo" instead of "make bin/foo"
 BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_noise \
 	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer shadow_lab star_light_preview earthlike \
-	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
-	test_marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
+	infinite-taunt names stl_parser test_key_value_parser test-matrix test-mathutils test-space-partition \
+	test_marshal test-quat test-fleet test-mtwist device-io-sample-1 test_nonuniform_random_sampler \
 	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
-	test_snis_dmx snis_test_audio check-endianness test_stringutils yoke-test-program
+	test_snis_dmx snis_test_audio check-endianness test_stringutils yoke-test-program \
+	test_mesh_fracture test_wled test_snis_ship_type test_transport_contract
 ${BINARY_NAMES}:
 	@echo "You probably meant: make bin/$@" 1>&2
 	@/bin/false
@@ -1009,7 +1010,7 @@ $(OD)/stl_parser.o:	stl_parser.c Makefile ${ODT}
 bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)/quat.o $(OD)/mtwist.o \
 		$(OD)/open-simplex-noise.o mikktspace/mikktspace.o \
 		$(OD)/string-utils.o $(OD)/stacktrace.o Makefile ${BIN}
-	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${ASANFLAG} ${UBFLAG} \
+	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${SDLCFLAGS} \
 		-o bin/stl_parser stl_parser.c ${OD}/matrix.o ${OD}/mesh.o ${OD}/mathutils.o \
 		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o \
 		${OD}/stacktrace.o -lm $(LDFLAGS)
@@ -1030,10 +1031,11 @@ $(OD)/transport_contract.o:	transport_contract.h
 
 bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/commodities.o \
 				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
-				${ODT} ${BIN}
-	$(CC) -g ${ASANFLAG} ${UBFLAG} ${BOUNDSFLAGS} -DTEST_TRANSPORT_CONTRACT=1 \
+				${OD}/stacktrace.o ${ODT} ${BIN}
+	$(CC) -g ${ASANFLAG} ${UBSANFLAG} ${BOUNDSFLAGS} -DTEST_TRANSPORT_CONTRACT=1 \
 			-o bin/test_transport_contract transport_contract.c \
-			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o
+			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o \
+			${OD}/infinite-taunt.o ${OD}/stacktrace.o -lm
 
 $(OD)/png_utils.o:	png_utils.c png_utils.h Makefile ${ODT}
 	$(Q)$(COMPILE) ${PNGCFLAGS}
@@ -1071,7 +1073,6 @@ $(OD)/key_value_parser.o:	key_value_parser.h
 
 bin/test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_KEY_VALUE_PARSER -o bin/test_key_value_parser key_value_parser.c
-	bin/test_key_value_parser
 
 bin/test-matrix:	matrix.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_MATRIX -o bin/test-matrix matrix.c -lm
@@ -1079,8 +1080,8 @@ bin/test-matrix:	matrix.c Makefile ${BIN}
 bin/test-mathutils:	mathutils.c mathutils.h Makefile ${BIN} ${OD}/mtwist.o
 	$(CC) ${MYCFLAGS} -DTEST_MATHUTILS -o bin/test-mathutils mathutils.c ${OD}/mtwist.o -lm
 
-bin/test_stringutils:	test_stringutils.c Makefile ${BIN} ${ODT} ${OD}/string-utils.o
-	$(CC) ${MYCFLAGS} -g -o bin/test_stringutils test_stringutils.c ${OD}/string-utils.o
+bin/test_stringutils:	test_stringutils.c Makefile ${BIN} ${ODT} ${OD}/string-utils.o ${OD}/stacktrace.o
+	$(CC) ${MYCFLAGS} -g -o bin/test_stringutils test_stringutils.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test-space-partition:	space-part.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o bin/test-space-partition space-part.c -lm
@@ -1090,8 +1091,8 @@ $(OD)/snis_hash.o:	snis_hash.h
 test_snis_crypt:	snis_hash.c snis_hash.h
 	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c ${CRYPTLIBS}
 
-bin/test_marshal:	snis_marshal.c snis_marshal.h stacktrace.o ${OD}/string-utils.o Makefile
-	$(CC) -DTEST_MARSHAL -o bin/test_marshal stacktrace.o snis_marshal.c ${OD}/string-utils.o
+bin/test_marshal:	snis_marshal.c snis_marshal.h ${OD}/stacktrace.o ${OD}/string-utils.o Makefile ${BIN}
+	$(CC) ${BOUNDSFLAGS} -DTEST_MARSHAL -o bin/test_marshal ${OD}/stacktrace.o snis_marshal.c ${OD}/string-utils.o -lm
 
 $(OD)/snis_nl.o:	snis_nl.h
 
@@ -1126,6 +1127,8 @@ mostly-clean:
 	${OD}/*.o ${ODT} \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
+	wwviaudio_recording_test a_star_test a_star_test.o a_star.o test_xdg_base_dir test_pronunciation \
+	test_planetary_atmosphere test_snis_crypt snis_nl spelled_numbers \
 	$(filter %.gz,${MAN1PAGES} ${MAN6PAGES}) \
 	bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program build_info.h ${METAINFOFILE} \
@@ -1146,9 +1149,8 @@ mostly-clean:
 bin/test-quat:	test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
 	$(CC) ${BOUNDSFLAGS} -Wall -Wextra --pedantic -o bin/test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
 
-bin/test-fleet: ${OD}/quat.o ${OD}/fleet.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) -DTESTFLEET=1 -c -o ${OD}/test-fleet.o fleet.c
-	$(CC) ${BOUNDSFLAGS} -DTESTFLEET=1 -o bin/test-fleet ${OD}/test-fleet.o ${OD}/mathutils.o ${OD}/quat.o ${OD}/mtwist.o -lm
+bin/test-fleet:	fleet.c fleet.h ${OD}/quat.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
+	$(CC) ${BOUNDSFLAGS} -DTESTFLEET=1 -o bin/test-fleet fleet.c ${OD}/mathutils.o ${OD}/quat.o ${OD}/mtwist.o -lm
 
 bin/test-mtwist: ${OD}/mtwist.o test-mtwist.c Makefile ${BIN}
 	$(CC) ${BOUNDSFLAGS} -o bin/test-mtwist ${OD}/mtwist.o test-mtwist.c
@@ -1178,17 +1180,16 @@ bin/snis-console:	${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o $
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.h
 
 bin/test_nonuniform_random_sampler:	nonuniform_random_sampler.c ${OD}/mathutils.o ${OD}/mtwist.o ${BIN}
-	$(CC) -D TEST_NONUNIFORM_SAMPLER -o bin/test_nonuniform_random_sampler ${OD}/mtwist.o ${OD}/mathutils.o -lm nonuniform_random_sampler.c
+	$(CC) ${BOUNDSFLAGS} -DTEST_NONUNIFORM_SAMPLER -o bin/test_nonuniform_random_sampler nonuniform_random_sampler.c ${OD}/mtwist.o ${OD}/mathutils.o -lm
 
-bin/test-commodities:	${OD}/commodities.o Makefile ${OD}/string-utils.o ${BIN} ${OD}/stacktrace.o
-	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o ${OD}/test-commodities.o
-	$(CC) ${BOUNDSFLAGS} -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o ${OD}/stacktrace.o
+bin/test-commodities:	commodities.c commodities.h Makefile ${OD}/string-utils.o ${BIN} ${OD}/stacktrace.o
+	$(CC) ${BOUNDSFLAGS} -DTESTCOMMODITIES=1 -O3 -o bin/test-commodities commodities.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mesh.o \
 		${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o Makefile ${BIN}
-	$(CC) -o bin/test-obj-parser mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mtwist.o \
+	$(CC) ${BOUNDSFLAGS} -o bin/test-obj-parser mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mtwist.o \
 		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o \
-		-lm test-obj-parser.c
+		test-obj-parser.c -lm
 
 test:	${TESTPROGS}
 	/bin/true	# Prevent make from running "$(CC) test.o".
@@ -1206,7 +1207,7 @@ bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.
 	$(CC) ${BOUNDSFLAGS} -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test_crater:	$(OD)/test_crater.o $(OD)/crater.o $(OD)/mathutils.o $(OD)/mtwist.o ${OD}/png_utils.o ${BIN}
-	$(CC) -o $@ ${PNGCFLAGS} $(OD)/test_crater.o $(OD)/crater.o $(OD)/mtwist.o ${OD}/png_utils.o ${PNGLIBS} $(OD)/mathutils.o -lm
+	$(CC) ${BOUNDSFLAGS} -o $@ ${PNGCFLAGS} $(OD)/test_crater.o $(OD)/crater.o $(OD)/mtwist.o ${OD}/png_utils.o ${PNGLIBS} $(OD)/mathutils.o -lm
 
 ${MANSRCDIR}/%.gz:	${MANSRCDIR}/%
 	gzip -9 - < $< > $@
@@ -1334,7 +1335,7 @@ uninstall:
 	${UPDATE_DESKTOP}
 
 clean:	mostly-clean
-	rm -f ${MODELS} bin/test_marshal test_crater
+	rm -f ${MODELS}
 	rm -f opus-1.3.1.tar.gz
 
 depend:
