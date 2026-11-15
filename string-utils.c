@@ -43,10 +43,13 @@ void remove_trailing_whitespace(char *s)
 	while (len >= 0) {
 		switch (s[len]) {
 		case '\t':
+			(void) 0;
 			FALLTHROUGH;
 		case ' ':
+			(void) 0;
 			FALLTHROUGH;
 		case '\r':
+			(void) 0;
 			FALLTHROUGH;
 		case '\n':
 			s[len] = '\0';
