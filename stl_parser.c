@@ -70,6 +70,20 @@ static int count_facets(char *filename)
 		close(fd);
 		return rc;
 	}
+	if (buf.st_size < 0) {
+		/* fstat() gave us a negative size?  This should not happen.  But, we check
+		 * for it, because otherwise, the compiler bitches about the read() below potentially
+		 * having a gigantic size passed to it ((unsigned long) -1, I guess).  If we reject
+		 * it here, then the compiler is happy.
+		 */
+		fprintf(stderr, "%s: Yikesaroo! stat() returned negative file size! Skipping.\n",
+				filename);
+		return -1;
+	}
+	if (buf.st_size > 1024*1024*1024 - 1) { /* a model that is >= 1Gb is too freakin' big. */
+		fprintf(stderr, "%s: is too freakin' big! Skipping.\n", filename);
+		return -1;
+	}
 	tempstr = malloc(buf.st_size + 1);
 	rc = read(fd, tempstr, buf.st_size);
 	if (rc < 0) {
