@@ -35082,7 +35082,7 @@ static void connect_to_multiverse(struct multiverse_server_info *msi,
 	int sock = -1;
 	struct addrinfo *mvserverinfo, *i;
 	struct addrinfo hints;
-	unsigned char *x;
+	unsigned char *x = NULL;
 	char response[100];
 	char starsystem_name[SSGL_LOCATIONSIZE];
 	int attempt_number = 1;
@@ -35108,11 +35108,23 @@ try_again:
 		 */
 		fprintf(stderr, "Trying NAT ghetto method ...\n");
 		snprintf(hoststr, sizeof(hoststr), "%s", lobbyhost);
+		assert(attempt_number >= 3);
+		x = NULL;
+	} else {
+		/* Should not get here. */
+		snprintf(hoststr, sizeof(hoststr), "localhost");
+		x = NULL;
 	}
 
-	if (multiverse_debug)
-		fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
-			logprefix(), multiverse_server->location, x[0], x[1], x[2], x[3], port);
+	if (multiverse_debug) {
+		if (x) {
+			fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
+				logprefix(), hoststr, x[0], x[1], x[2], x[3], port);
+		} else {
+			fprintf(stderr, "%s: connecting to multiverse %s/%hu\n",
+				logprefix(), hoststr, port);
+		}
+	}
 	int flag = 1;
 
 
@@ -35204,9 +35216,12 @@ try_again:
 	}
 	if (multiverse_debug) {
 		fprintf(stderr, "%s: write starsystem name %s to multiverse\n", logprefix(), starsystem_name);
-
-		fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
-			logprefix(), x[0], x[1], x[2], x[3], port, sock);
+		if (x)
+			fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
+				logprefix(), x[0], x[1], x[2], x[3], port, sock);
+		else
+			fprintf(stderr, "%s: connected to snis_multiverse (%s/%hu on socket %d)\n",
+				logprefix(), hoststr, port, sock);
 	}
 
 	msi->sock = sock;
