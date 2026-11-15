@@ -261,7 +261,7 @@ void mesh_graph_dev_init(struct mesh *m)
 
 			if (m->l[i].flag & MESH_LINE_STRIP) {
 				struct vertex *vcurr = vstart;
-				struct vertex *v1;
+				struct vertex *v1 = NULL;
 
 				while (vcurr <= vend) {
 					struct vertex *v2 = vcurr;
