@@ -155,6 +155,9 @@
 		/* tint with alpha pre multiply */
 		f_FragColor.rgb *= v_TintColor.rgb;
 		f_FragColor *= v_TintColor.a;
+		float frag_dist = length(v_Position);
+		float near_fade = smoothstep(250.0, 2200.0, frag_dist);
+		f_FragColor *= near_fade;
 		f_FragColor = filmic_tonemap(f_FragColor);
 	}
 #endif

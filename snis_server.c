@@ -10603,9 +10603,10 @@ static void player_collision_detection(void *player, void *object)
 		}
 
 		/* Check for collision with planetary ring */
-		if (t->tsd.planet.ring && (universe_timestamp & 0x7) == 0) {
+		if (t->tsd.planet.ring) {
 			union vec3 player_center, ring_center;
-			float radius, inner, outer;
+			struct planetary_ring_rock hit_rock;
+			float radius, inner, outer, ship_speed;
 			const int index = t->tsd.planet.solarsystem_planet_type;
 
 			ring_center.v.x = t->x;
@@ -10619,8 +10620,71 @@ static void player_collision_detection(void *player, void *object)
 			radius = t->tsd.planet.radius;
 			inner = planetary_ring_data[index].inner_radius;
 			outer = planetary_ring_data[index].outer_radius;
-			if (collides_with_planetary_ring(&player_center, &ring_center, &t->orientation,
-								radius, inner, outer)) {
+			ship_speed = (float) sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+
+			if (planetary_ring_find_rock_collision(&player_center, 10.0f,
+					&ring_center, &t->tsd.planet.initial_orientation,
+					radius, &planetary_ring_data[index], t->id,
+					&hit_rock)) {
+				struct snis_entity rock_entity;
+				union vec3 sep;
+				float sep_len, push_dist;
+				const float maxrv = 15.0f;
+
+				vec3_sub(&sep, &player_center, &hit_rock.pos);
+				sep_len = vec3_magnitude(&sep);
+				if (sep_len > 1e-4f) {
+					vec3_mul_self(&sep, 1.0f / sep_len);
+				} else {
+					sep.v.x = 0.0f;
+					sep.v.y = 0.0f;
+					sep.v.z = 1.0f;
+				}
+				push_dist = hit_rock.radius + 12.0f;
+				set_object_location(o,
+					hit_rock.pos.v.x + sep.v.x * push_dist,
+					hit_rock.pos.v.y + sep.v.y * push_dist,
+					hit_rock.pos.v.z + sep.v.z * push_dist);
+
+				memset(&rock_entity, 0, sizeof(rock_entity));
+				rock_entity.type = OBJTYPE_ASTEROID;
+				rock_entity.x = hit_rock.pos.v.x;
+				rock_entity.y = hit_rock.pos.v.y;
+				rock_entity.z = hit_rock.pos.v.z;
+				do_detailed_collision_impulse(o, &rock_entity, 10.0f,
+					fmaxf(5.0f, hit_rock.scale * 25.0f),
+					10.0f, hit_rock.radius, 0.7f);
+
+				o->tsd.ship.yaw_velocity =
+					0.01 * (maxrv * snis_randn(100) - maxrv * 0.5) * M_PI / 180.0;
+				o->tsd.ship.pitch_velocity =
+					0.01 * (maxrv * snis_randn(100) - maxrv * 0.5) * M_PI / 180.0;
+				o->tsd.ship.roll_velocity =
+					0.01 * (maxrv * snis_randn(100) - maxrv * 0.5) * M_PI / 180.0;
+				o->tsd.ship.nav_damping_suppression = 1.0;
+
+				snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
+				send_packet_to_all_clients_on_a_bridge(o->id,
+					snis_opcode_pkt("b", OPCODE_PROXIMITY_ALERT),
+						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+				send_packet_to_all_clients_on_a_bridge(o->id,
+					snis_opcode_pkt("b", OPCODE_COLLISION_NOTIFICATION),
+						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+				(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
+					15, 8, 50, OBJTYPE_SPARK);
+				if (ship_speed > 100.0f && hit_rock.radius > 15.0f && !player_invincibility) {
+					kill_player(o, 1);
+					send_ship_damage_packet(o);
+				} else {
+					calculate_atmosphere_damage(o);
+					send_ship_damage_packet(o);
+				}
+			} else if ((universe_timestamp & 0x7) == 0 &&
+					ship_speed > max_player_velocity * 0.5f &&
+					collides_with_planetary_ring(&player_center, &ring_center,
+						&t->tsd.planet.initial_orientation,
+						radius, inner, outer,
+						planetary_ring_data[index].texture_v)) {
 				(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
 					5, 5, 50, OBJTYPE_SPARK);
 				calculate_atmosphere_damage(o);

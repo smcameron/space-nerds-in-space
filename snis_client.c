@@ -659,6 +659,7 @@ static struct mesh *missile_mesh;
 static struct mesh *torpedo_nav_mesh;
 static struct mesh *laser_mesh;
 static struct mesh *asteroid_mesh[NASTEROID_MODELS];
+static struct mesh *asteroid_lp_mesh[NASTEROID_MODELS];
 static struct mesh *unit_cube_mesh;
 static struct mesh *sphere_mesh;
 static struct mesh *sphere_lp_mesh; /* low poly version */
@@ -2618,6 +2619,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 					orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
+		go[i].tsd.planet.initial_orientation = *orientation;
 		if (has_atmosphere) {
 			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 			go[i].tsd.planet.atmosphere = atm;
@@ -2650,7 +2652,14 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		if (e)
 			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
+		union vec3 z_axis = { { 0.0f, 0.0f, 1.0f } };
+		union vec3 old_normal, new_normal;
+
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
+		quat_rot_vec(&old_normal, &z_axis, &go[i].tsd.planet.initial_orientation);
+		quat_rot_vec(&new_normal, &z_axis, orientation);
+		if (vec3_dot(&old_normal, &new_normal) < 0.9995f)
+			go[i].tsd.planet.initial_orientation = *orientation;
 	}
 
 	/* Enforce bounds on quantities used as array indices */
@@ -3665,6 +3674,280 @@ static void remove_ship_death_entities(struct entity_context *cx)
 			remove_entity(cx, ship_death[i].entity[j]);
 		ship_death[i].nentities = 0;
 	}
+}
+
+#define MAX_PLANETARY_RING_ROCK_ENTITIES 320
+static int planetary_ring_asteroids = 1;
+static struct entity *planetary_ring_rock_entities[MAX_PLANETARY_RING_ROCK_ENTITIES];
+static int nplanetary_ring_rock_entities = 0;
+
+static float planetary_ring_rock_shade(const union vec3 *rock_pos,
+					const union vec3 *planet_pos,
+					float planet_radius)
+{
+	union vec3 to_sun, to_planet, perp;
+	float d_sun, d_planet, along, perp_len;
+	double a, b, sep;
+
+	if (!planets_shade_other_objects)
+		return 0.0f;
+
+	to_sun.v.x = (float) SUNX - rock_pos->v.x;
+	to_sun.v.y = (float) SUNY - rock_pos->v.y;
+	to_sun.v.z = (float) SUNZ - rock_pos->v.z;
+	d_sun = vec3_magnitude(&to_sun);
+	if (d_sun < 1e-3f)
+		return 0.0f;
+
+	vec3_mul_self(&to_sun, 1.0f / d_sun);
+	vec3_sub(&to_planet, planet_pos, rock_pos);
+	along = vec3_dot(&to_planet, &to_sun);
+	if (along <= 0.0f || along >= d_sun)
+		return 0.0f;
+
+	perp.v.x = to_planet.v.x - along * to_sun.v.x;
+	perp.v.y = to_planet.v.y - along * to_sun.v.y;
+	perp.v.z = to_planet.v.z - along * to_sun.v.z;
+	perp_len = vec3_magnitude(&perp);
+	if (perp_len >= planet_radius + star_radius)
+		return 0.0f;
+
+	d_planet = vec3_magnitude(&to_planet);
+	if (d_planet < 1e-3f)
+		return 0.0f;
+
+	a = asin(fmin(1.0, (double) star_radius / (double) d_sun));
+	b = asin(fmin(1.0, (double) planet_radius / (double) d_planet));
+	sep = atan2((double) perp_len, (double) along);
+	return (float) disc_occlusion_fraction(a, b, sep);
+}
+
+static void emit_planetary_ring_cell(struct entity_context *cx,
+				const struct snis_entity *planet,
+				const union vec3 *planet_pos,
+				const struct planetary_ring_data *ring_data,
+				const union vec3 *cam_pos,
+				const union vec3 *cam_fwd,
+				float cos_half_cone,
+				float cam_ux, float cam_vy, float dz_eff,
+				double time_sec, int ix, int iy)
+{
+	float cell_dx, cell_dy, cell_d2, small_lim;
+	int sub, max_sub;
+
+	if (nplanetary_ring_rock_entities >= MAX_PLANETARY_RING_ROCK_ENTITIES)
+		return;
+
+	cell_dx = ((float) ix + 0.5f) * PLANETARY_RING_CELL_SIZE - cam_ux;
+	cell_dy = ((float) iy + 0.5f) * PLANETARY_RING_CELL_SIZE - cam_vy;
+	cell_d2 = cell_dx * cell_dx + cell_dy * cell_dy + dz_eff * dz_eff;
+	small_lim = PLANETARY_RING_SMALL_BUBBLE_RADIUS + PLANETARY_RING_CELL_SIZE;
+	max_sub = (cell_d2 <= small_lim * small_lim) ? 3 : 1;
+
+	for (sub = 0; sub < max_sub; sub++) {
+		struct planetary_ring_rock rock;
+		union vec3 to_rock;
+		union quat orient;
+		struct entity *e;
+		float d_cam, max_b, fade_start, t, fade, dot, shade;
+		int model, mat_idx;
+
+		if (nplanetary_ring_rock_entities >= MAX_PLANETARY_RING_ROCK_ENTITIES)
+			break;
+
+		if (!planetary_ring_cell_rock(planet_pos,
+					&planet->tsd.planet.initial_orientation,
+					planet->tsd.planet.radius, ring_data,
+					planet->id, ix, iy, sub, &rock))
+			continue;
+
+		vec3_sub(&to_rock, &rock.pos, cam_pos);
+		d_cam = vec3_magnitude(&to_rock);
+		max_b = (sub == 0) ? PLANETARY_RING_BUBBLE_RADIUS :
+			PLANETARY_RING_SMALL_BUBBLE_RADIUS;
+		if (d_cam >= max_b)
+			continue;
+
+		dot = vec3_dot(&to_rock, cam_fwd);
+		if (d_cam > rock.radius + 5.0f && dot < cos_half_cone * d_cam - rock.radius)
+			continue;
+
+		fade_start = (sub == 0) ? PLANETARY_RING_FADE_RADIUS :
+			PLANETARY_RING_SMALL_FADE_RADIUS;
+		if (d_cam <= fade_start) {
+			fade = 1.0f;
+		} else {
+			t = (d_cam - fade_start) / (max_b - fade_start);
+			fade = 1.0f - t * t * (3.0f - 2.0f * t);
+		}
+		if (fade <= 0.02f)
+			continue;
+
+		model = rock.model % NASTEROID_MODELS;
+		if (!asteroid_mesh[model])
+			continue;
+		mat_idx = rock.material_index % NASTEROID_TEXTURES;
+		e = add_entity(cx, asteroid_mesh[model],
+			rock.pos.v.x, rock.pos.v.y, rock.pos.v.z, ASTEROID_COLOR);
+		if (!e)
+			continue;
+
+		planetary_ring_rock_spin_orientation(&rock, time_sec, &orient);
+		update_entity_scale(e, rock.scale * fade);
+		update_entity_material(e, &asteroid_material[mat_idx]);
+		if (asteroid_lp_mesh[model])
+			entity_set_low_poly_mesh(e, asteroid_lp_mesh[model]);
+		update_entity_orientation(e, &orient);
+		update_entity_shadow_casting(e, (sub == 0 && d_cam < 1000.0f) ? 1 : 0);
+
+		shade = planetary_ring_rock_shade(&rock.pos, planet_pos,
+						planet->tsd.planet.radius);
+		if (shade > 0.0f)
+			entity_set_in_shade(e, shade);
+
+		planetary_ring_rock_entities[nplanetary_ring_rock_entities++] = e;
+	}
+}
+
+static void add_planet_ring_rocks(struct entity_context *cx,
+				const struct snis_entity *p,
+				const union vec3 *cam_pos,
+				const union vec3 *cam_fwd,
+				float cos_half_cone, double time_sec)
+{
+	int ring_idx = p->tsd.planet.solarsystem_planet_type;
+	const struct material *ring_mat = NULL;
+	struct planetary_ring_data ring_data;
+	union vec3 planet_pos, u_axis, v_axis, normal, rel;
+	float cam_dz, cam_ux, cam_vy, cam_r, inner_r, outer_r, reach, dz_eff, r_plane_max;
+	int cam_ix, cam_iy, max_ring, ring_step, di, dj;
+
+	if (p->tsd.planet.radius <= 0.0f)
+		return;
+	if (ring_idx >= 0 && ring_idx < NPLANET_MATERIALS)
+		ring_mat = planet_material[ring_idx].textured_planet.ring_material;
+	if (!ring_mat && ring_idx >= 0 && ring_idx < NPLANETARY_RING_MATERIALS)
+		ring_mat = &planetary_ring_material[ring_idx];
+	if (!ring_mat)
+		return;
+
+	ring_data.alpha = ring_mat->textured_planet_ring.alpha;
+	ring_data.texture_v = ring_mat->textured_planet_ring.texture_v;
+	ring_data.inner_radius = ring_mat->textured_planet_ring.inner_radius;
+	ring_data.outer_radius = ring_mat->textured_planet_ring.outer_radius;
+
+	planet_pos.v.x = (float) p->x;
+	planet_pos.v.y = (float) p->y;
+	planet_pos.v.z = (float) p->z;
+
+	planetary_ring_basis(&p->tsd.planet.initial_orientation, &u_axis, &v_axis, &normal);
+	vec3_sub(&rel, cam_pos, &planet_pos);
+	cam_dz = vec3_dot(&rel, &normal);
+	if (fabsf(cam_dz) > PLANETARY_RING_BUBBLE_RADIUS +
+			PLANETARY_RING_HALF_THICKNESS + PLANETARY_RING_MAX_ROCK_RADIUS)
+		return;
+
+	cam_ux = vec3_dot(&rel, &u_axis);
+	cam_vy = vec3_dot(&rel, &v_axis);
+	cam_r = hypotf(cam_ux, cam_vy);
+	inner_r = ring_data.inner_radius * p->tsd.planet.radius;
+	outer_r = ring_data.outer_radius * p->tsd.planet.radius;
+	reach = PLANETARY_RING_BUBBLE_RADIUS + PLANETARY_RING_MAX_ROCK_RADIUS;
+	if (cam_r < inner_r - reach || cam_r > outer_r + reach)
+		return;
+
+	dz_eff = fmaxf(0.0f, fabsf(cam_dz) -
+		(PLANETARY_RING_HALF_THICKNESS + PLANETARY_RING_MAX_ROCK_RADIUS));
+	r_plane_max = sqrtf(fmaxf(0.0f,
+			PLANETARY_RING_BUBBLE_RADIUS * PLANETARY_RING_BUBBLE_RADIUS -
+			dz_eff * dz_eff)) + PLANETARY_RING_MAX_ROCK_RADIUS;
+	max_ring = (int) ceilf(r_plane_max / PLANETARY_RING_CELL_SIZE) + 1;
+	cam_ix = (int) floorf(cam_ux / PLANETARY_RING_CELL_SIZE);
+	cam_iy = (int) floorf(cam_vy / PLANETARY_RING_CELL_SIZE);
+
+	emit_planetary_ring_cell(cx, p, &planet_pos, &ring_data, cam_pos, cam_fwd,
+				cos_half_cone, cam_ux, cam_vy, dz_eff,
+				time_sec, cam_ix, cam_iy);
+
+	for (ring_step = 1; ring_step <= max_ring &&
+			nplanetary_ring_rock_entities < MAX_PLANETARY_RING_ROCK_ENTITIES;
+			ring_step++) {
+		for (di = -ring_step; di <= ring_step; di++) {
+			emit_planetary_ring_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						cam_ux, cam_vy, dz_eff, time_sec,
+						cam_ix + di, cam_iy - ring_step);
+			emit_planetary_ring_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						cam_ux, cam_vy, dz_eff, time_sec,
+						cam_ix + di, cam_iy + ring_step);
+		}
+		for (dj = -ring_step + 1; dj <= ring_step - 1; dj++) {
+			emit_planetary_ring_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						cam_ux, cam_vy, dz_eff, time_sec,
+						cam_ix - ring_step, cam_iy + dj);
+			emit_planetary_ring_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						cam_ux, cam_vy, dz_eff, time_sec,
+						cam_ix + ring_step, cam_iy + dj);
+		}
+	}
+}
+
+static void add_planetary_ring_rock_entities(struct entity_context *cx)
+{
+	float camx, camy, camz, lookx, looky, lookz;
+	float near_p, far_p, angle_of_view, aspect, half_vert_rad, half_cone, cos_half_cone;
+	int xvpixels, yvpixels, i, highest;
+	union vec3 cam_pos, cam_fwd;
+	double time_sec;
+
+	if (!planetary_ring_asteroids)
+		return;
+
+	nplanetary_ring_rock_entities = 0;
+
+	camera_get_pos(cx, &camx, &camy, &camz);
+	camera_get_look_at(cx, &lookx, &looky, &lookz);
+	camera_get_parameters(cx, &near_p, &far_p, &xvpixels, &yvpixels, &angle_of_view);
+
+	cam_pos.v.x = camx;
+	cam_pos.v.y = camy;
+	cam_pos.v.z = camz;
+
+	cam_fwd.v.x = lookx - camx;
+	cam_fwd.v.y = looky - camy;
+	cam_fwd.v.z = lookz - camz;
+	if (vec3_magnitude(&cam_fwd) < 1e-5f)
+		return;
+	vec3_normalize_self(&cam_fwd);
+
+	aspect = (yvpixels > 0) ? (float) xvpixels / (float) yvpixels : 1.0f;
+	half_vert_rad = 0.5f * angle_of_view;
+	half_cone = atanf(tanf(half_vert_rad) * hypotf(1.0f, aspect)) + 0.15f;
+	cos_half_cone = (half_cone < (float) M_PI * 0.95f) ? cosf(half_cone) : -1.0f;
+
+	time_sec = universe_timestamp() / (double) UNIVERSE_TICKS_PER_SECOND;
+	highest = snis_object_pool_highest_object(pool);
+
+	for (i = 0; i <= highest; i++) {
+		if (!go[i].alive || go[i].type != OBJTYPE_PLANET || !go[i].tsd.planet.ring)
+			continue;
+		add_planet_ring_rocks(cx, &go[i], &cam_pos, &cam_fwd,
+				cos_half_cone, time_sec);
+		if (nplanetary_ring_rock_entities >= MAX_PLANETARY_RING_ROCK_ENTITIES)
+			break;
+	}
+}
+
+static void remove_planetary_ring_rock_entities(struct entity_context *cx)
+{
+	int i;
+
+	for (i = 0; i < nplanetary_ring_rock_entities; i++)
+		remove_entity(cx, planetary_ring_rock_entities[i]);
+	nplanetary_ring_rock_entities = 0;
 }
 
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
@@ -10980,7 +11263,9 @@ static void show_weapons_camera_view(void)
 
 	show_lens_flare(o, &cam_pos, &adjusted_cam_orientation); /* this will be using data from last frame */
 	add_ship_death_entities(ecx);
+	add_planetary_ring_rock_entities(ecx);
 	render_entities(ecx);
+	remove_planetary_ring_rock_entities(ecx);
 	remove_ship_death_entities(ecx);
 	remove_lens_flare_entities();
 
@@ -11438,7 +11723,9 @@ static void show_mainscreen(void)
 	pthread_mutex_lock(&universe_mutex);
 	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
 	add_ship_death_entities(ecx);
+	add_planetary_ring_rock_entities(ecx);
 	render_entities(ecx);
+	remove_planetary_ring_rock_entities(ecx);
 	remove_ship_death_entities(ecx);
 	remove_lens_flare_entities();
 
@@ -20752,6 +21039,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&mf_cockpit, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
 	{ "LEAVE_NO_ORPHANS", "1: KILL ALL SERVER PROCESSES ON EXIT IF RUNNING INSIDE CONTAINER",
 		&leave_no_orphans, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
+	{ "PLANETARY_RING_ASTEROIDS", "1 - ENABLE INDIVIDUAL 3D ASTEROIDS IN PLANETARY RINGS, 0 - DISABLE",
+		&planetary_ring_asteroids, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -26993,6 +27282,9 @@ static void init_meshes(void)
 	update_splash_progress(80);
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
+		float minx, miny, minz, maxx, maxy, maxz;
+		float hx, hy, hz, maxh, sx, sy, sz;
+		int j;
 
 		if (i == 0)
 			snprintf(filename, sizeof(filename), "asteroid.stl");
@@ -27006,6 +27298,45 @@ static void init_meshes(void)
 		/* The following printf is used for asteroid radius hack in */
 		/* snis_server.c:player_collision_detection() */
 		/* printf("asteroid[%d] radius is %f\n", i, asteroid_mesh[i]->radius); */
+
+		asteroid_lp_mesh[i] = mesh_unit_spherified_cube(4);
+		if (asteroid_lp_mesh[i] && asteroid_mesh[i]) {
+			mesh_aabb(asteroid_mesh[i], &minx, &miny, &minz,
+				&maxx, &maxy, &maxz);
+			hx = 0.5f * (maxx - minx);
+			hy = 0.5f * (maxy - miny);
+			hz = 0.5f * (maxz - minz);
+			maxh = fmaxf(hx, fmaxf(hy, hz));
+			if (maxh > 0.0f) {
+				sx = fmaxf(0.25f, hx / maxh);
+				sy = fmaxf(0.25f, hy / maxh);
+				sz = fmaxf(0.25f, hz / maxh);
+			} else {
+				sx = 1.0f;
+				sy = 0.9f;
+				sz = 0.8f;
+			}
+			/* Ensure non-uniform vertex radii before mesh_distort() so
+			 * fmap(r, minr, maxr, ...) never sees minr == maxr.
+			 */
+			if (fabsf(sx - sy) < 0.02f && fabsf(sy - sz) < 0.02f) {
+				sx *= 1.08f;
+				sz *= 0.92f;
+			}
+			for (j = 0; j < asteroid_lp_mesh[i]->nvertices; j++) {
+				asteroid_lp_mesh[i]->v[j].x *= sx;
+				asteroid_lp_mesh[i]->v[j].y *= sy;
+				asteroid_lp_mesh[i]->v[j].z *= sz;
+			}
+			asteroid_lp_mesh[i]->radius = mesh_compute_radius(asteroid_lp_mesh[i]);
+			mesh_distort(asteroid_lp_mesh[i], 0.25f, osn);
+			asteroid_lp_mesh[i]->radius = mesh_compute_radius(asteroid_lp_mesh[i]);
+			if (asteroid_lp_mesh[i]->radius > 0.0f)
+				mesh_scale(asteroid_lp_mesh[i],
+					asteroid_mesh[i]->radius / asteroid_lp_mesh[i]->radius);
+			mesh_set_average_vertex_normals(asteroid_lp_mesh[i]);
+			mesh_graph_dev_init(asteroid_lp_mesh[i]);
+		}
 	}
 
 	unit_cube_mesh = mesh_unit_cube(2);
