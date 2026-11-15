@@ -1195,7 +1195,7 @@ static void fire_lua_proximity_checks(void)
 {
 	struct lua_proximity_check *i, *last, *next, *this;
 	struct lua_proximity_check *temp_list = NULL;
-	double dist2;
+	double dist2 = -1.0;
 	int a, b;
 
 	last = NULL;
@@ -1233,6 +1233,9 @@ static void fire_lua_proximity_checks(void)
 		i = next;
 	}
 	pthread_mutex_unlock(&universe_mutex);
+
+	if (dist2 < 0.0)
+		return;
 
 	/* Call all the lua proximity check callback functions in the temporary list  */
 	for (i = temp_list; i != NULL; i = next) {
