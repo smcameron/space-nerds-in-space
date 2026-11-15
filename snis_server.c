@@ -10605,7 +10605,6 @@ static void player_collision_detection(void *player, void *object)
 		/* Check for collision with planetary ring */
 		if (t->tsd.planet.ring && (universe_timestamp & 0x7) == 0) {
 			union vec3 player_center, ring_center;
-			union quat orientation;
 			float radius, inner, outer;
 			const int index = t->tsd.planet.solarsystem_planet_type;
 
@@ -10617,11 +10616,10 @@ static void player_collision_detection(void *player, void *object)
 			player_center.v.y = o->y;
 			player_center.v.z = o->z;
 
-			orientation = random_orientation[t->id % NRANDOM_ORIENTATIONS];
 			radius = t->tsd.planet.radius;
 			inner = planetary_ring_data[index].inner_radius;
 			outer = planetary_ring_data[index].outer_radius;
-			if (collides_with_planetary_ring(&player_center, &ring_center, &orientation,
+			if (collides_with_planetary_ring(&player_center, &ring_center, &t->orientation,
 								radius, inner, outer)) {
 				(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
 					5, 5, 50, OBJTYPE_SPARK);
