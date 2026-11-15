@@ -33,7 +33,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <curl/curl.h>
-#include <openssl/md5.h>
+#include <openssl/evp.h>
 #include <getopt.h>
 #include <dirent.h>
 #include <SDL.h>
@@ -199,23 +199,29 @@ static char *compute_md5_sum(const char *filename)
 		return NULL;
 	}
 
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+	if (!mdctx) {
+		fclose(file);
+		return NULL;
+	}
+
 	unsigned char buffer[1024];
-	unsigned char md5_digest[MD5_DIGEST_LENGTH];
-	MD5_CTX context;
-	MD5_Init(&context);
+	unsigned char md5_digest[EVP_MAX_MD_SIZE];
+	unsigned int md5_digest_len = 0;
+
+	EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 
 	size_t bytes_read;
-	while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-		MD5_Update(&context, buffer, bytes_read);
-	}
+	while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0)
+		EVP_DigestUpdate(mdctx, buffer, bytes_read);
 
-	MD5_Final(md5_digest, &context);
+	EVP_DigestFinal_ex(mdctx, md5_digest, &md5_digest_len);
+	EVP_MD_CTX_free(mdctx);
 	fclose(file);
 
-	char *hash_str = malloc(MD5_DIGEST_LENGTH * 2 + 1); /* 2 hex digits per byte + null terminator */
-	for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+	char *hash_str = malloc(md5_digest_len * 2 + 1); /* 2 hex digits per byte + null terminator */
+	for (unsigned int i = 0; i < md5_digest_len; i++)
 		snprintf(hash_str + i * 2, 3, "%02x", md5_digest[i]);
-	}
 	return hash_str;
 }
 
