@@ -52,7 +52,6 @@
 	varying vec3 v_RingPos;
 
 	uniform sampler2D u_AlbedoTex;
-	uniform float u_in_shade;
 	uniform float u_ring_texture_v;
 	uniform float u_ring_inner_radius;
 	uniform float u_ring_outer_radius;
@@ -177,7 +176,7 @@
 		if (accum_a <= 0.001)
 			discard;
 
-		accum_rgb *= (1.0 - u_in_shade) * v_TintColor.rgb * v_TintColor.a;
+		accum_rgb *= v_TintColor.rgb * v_TintColor.a;
 		accum_a *= v_TintColor.a;
 		gl_FragColor = filmic_tonemap(vec4(accum_rgb, accum_a));
 	}
