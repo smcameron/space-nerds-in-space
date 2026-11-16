@@ -71,18 +71,6 @@
 		return fract((p3.x + p3.y) * p3.z);
 	}
 
-	float unit_sphere_shadow(vec3 p, vec3 ldir)
-	{
-		float b = dot(p, ldir);
-		float c = dot(p, p) - 1.0;
-		float disc = b * b - c;
-
-		if (disc < 0.0)
-			return 0.0;
-		float t0 = -b - sqrt(disc);
-		return (t0 >= 0.0) ? 1.0 : 0.0;
-	}
-
 	void main()
 	{
 		float planet_radius = max(1.0, u_DustParams.x);
@@ -137,10 +125,9 @@
 				discard;
 		}
 
-		/* Evaluate planet umbra shadow once at segment midpoint */
+		/* Sun direction changes negligibly across the short ray segment */
 		vec3 p_mid = ro + rd * (0.5 * (t_min + t_max));
-		float in_shadow = unit_sphere_shadow(p_mid, normalize(u_LightRingPos - p_mid));
-		vec3 shadow_mult = mix(vec3(1.0), vec3(0.25, 0.1, 0.1), in_shadow);
+		vec3 ldir = normalize(u_LightRingPos - p_mid);
 
 		const int STEPS = 6;
 		float dt = (t_max - t_min) / float(STEPS);
@@ -170,11 +157,17 @@
 					float t_world = t * planet_radius;
 					float dist_fade = clamp((u_DustDist.y - t_world) * inv_fade_span, 0.0, 1.0);
 
+					/* |p| >= inner_r > 1, so c > 0 and both roots share sign of -b */
+					float bl = dot(p, ldir);
+					float cl = dot(p, p) - 1.0;
+					float in_shadow = (bl < 0.0 && bl * bl >= cl) ? 1.0 : 0.0;
+					vec3 sample_rgb = tex.rgb * mix(vec3(1.0), vec3(0.25, 0.1, 0.1), in_shadow);
+
 					float opt = tex.a * v_dens * dist_fade * ext_dt;
 					float step_a = opt / (1.0 + 0.5 * opt);
 					float remain = 1.0 - accum_a;
 
-					accum_rgb += remain * tex.rgb * step_a;
+					accum_rgb += remain * sample_rgb * step_a;
 					accum_a += remain * step_a;
 					if (accum_a > 0.95)
 						break;
@@ -186,7 +179,7 @@
 		if (accum_a <= 0.001)
 			discard;
 
-		accum_rgb *= shadow_mult * (1.0 - u_in_shade) * v_TintColor.rgb * v_TintColor.a;
+		accum_rgb *= (1.0 - u_in_shade) * v_TintColor.rgb * v_TintColor.a;
 		accum_a *= v_TintColor.a;
 		f_FragColor = filmic_tonemap(vec4(accum_rgb, accum_a));
 	}

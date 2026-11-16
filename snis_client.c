@@ -4000,7 +4000,8 @@ static void add_planet_ring_dust(struct entity_context *cx,
 	quat_rot_vec(&light_ring, &rel_sun, &inv_q);
 
 	inside_slab = (fabsf(cam_ring.v.z) <= half_h + margin &&
-		cam_r >= inner_r - margin && cam_r <= outer_r + margin);
+		cam_r >= MIN_RING_RADIUS - margin &&
+		cam_r <= MAX_RING_RADIUS + margin);
 
 	dust_mat = &planetary_ring_dust_material[nplanetary_ring_dust_entities];
 	material_init_planetary_ring_dust(dust_mat);
