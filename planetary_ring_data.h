@@ -7,6 +7,7 @@
 
 #define PLANETARY_RING_MTWIST_SEED 178851064
 #define NPLANETARY_RING_MATERIALS 256
+#define PLANETARY_RING_TEXTURE "textures/planetary-ring0.png"
 #define PLANETARY_RING_DAMAGE_DIST 50.0
 #define PLANETARY_RING_CELL_SIZE 160.0f
 #define PLANETARY_RING_HALF_THICKNESS 45.0f
@@ -46,7 +47,7 @@ struct planetary_ring_rock {
 
 /* Function to consistently init planetary ring data */
 void init_planetary_ring_data(struct planetary_ring_data ring_data[], int nplanetary_rings,
-					uint32_t mtwist_seed);
+					uint32_t mtwist_seed, const char *ring_texture_path);
 
 /* Sample normalized ring opacity [0.0, 1.0] at normalized radial u and row texture_v */
 float planetary_ring_sample_density(float u, float texture_v);

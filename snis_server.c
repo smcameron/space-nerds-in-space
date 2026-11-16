@@ -35574,7 +35574,11 @@ int main(int argc, char *argv[])
 	set_random_seed(-1);
 	init_natural_language_system();
 	init_meshes();
-	init_planetary_ring_data(planetary_ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
+	char ring_tex_path[PATH_MAX + 1];
+
+	snprintf(ring_tex_path, sizeof(ring_tex_path), "%s/%s", asset_dir, PLANETARY_RING_TEXTURE);
+	init_planetary_ring_data(planetary_ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED,
+				replacement_asset_lookup(ring_tex_path, &replacement_assets));
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");

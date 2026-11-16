@@ -25726,10 +25726,17 @@ static int load_static_textures(void)
 			"textures/warp-effect.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
 
 	int i;
-	planetary_ring_texture_id = load_texture_no_mipmaps("textures/planetary-ring0.png", 0);
+	char ring_tex_path[PATH_MAX + 1];
+	char *resolved_ring_tex_path;
+
+	planetary_ring_texture_id = load_texture_no_mipmaps(PLANETARY_RING_TEXTURE, 0);
+
+	snprintf(ring_tex_path, sizeof(ring_tex_path), "%s/%s", asset_dir, PLANETARY_RING_TEXTURE);
+	resolved_ring_tex_path = replacement_asset_lookup(ring_tex_path, &replacement_assets);
 
 	ring_data = calloc(NPLANETARY_RING_MATERIALS, sizeof(*ring_data));
-	init_planetary_ring_data(ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
+	init_planetary_ring_data(ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED,
+				resolved_ring_tex_path);
 	update_splash_progress(20);
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) { /* Copy ring data into material struct */
 		material_init_textured_planet_ring(&planetary_ring_material[i]);

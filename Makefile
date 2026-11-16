@@ -375,7 +375,7 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		planetary_atmosphere.o planetary_ring_data.o mesh.o pthread_util.o \
+		planetary_atmosphere.o planetary_ring_data.o png_utils.o mesh.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
 		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o \
 		planetary_properties.o open-simplex-noise.o snis_licenses.o net_utils.o \
@@ -409,7 +409,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_client_forker.o snis_process_options.o workqueue.o ${MAIN_LOOP_OBJ}
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
-_CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
+_CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o \
 				black_hole_lens.o mesh_fracture.o particle_batch.o ship_death.o \
 				ship_death_fireball.o ship_death_shrapnel.o ship_death_wreck.o snis_wled.o \
 				${ASSET_FETCH_OBJ} ${SPEAK_OBJ}
@@ -445,7 +445,7 @@ X11CFLAGS=$(shell $(PKG_CONFIG) --cflags x11)
 SSGL=ssgl/libssglclient.a
 LIBS=${GLADLIBS} -Lssgl -lssglclient -ldl -lm ${PNGLIBS}
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
-SERVERLIBS=${MULTIVERSELIBS} ${LUALIBS}
+SERVERLIBS=${MULTIVERSELIBS} ${LUALIBS} ${PNGLIBS}
 #
 # NOTE: if you get
 #
@@ -1068,7 +1068,7 @@ test_xdg_base_dir:	xdg_base_dir_spec.c xdg_base_dir_spec.h Makefile
 test_pronunciation:	pronunciation.c Makefile
 	$(CC) -DTEST_PRONUNCIATION_FIXUP -o test_pronunciation pronunciation.c
 
-$(OD)/planetary_ring_data.o:	planetary_ring_data.h mtwist.h
+$(OD)/planetary_ring_data.o:	planetary_ring_data.h mtwist.h png_utils.h
 
 test_planetary_atmosphere:	planetary_atmosphere.c ${OD}/mtwist.o Makefile
 	$(CC) ${CFLAGS} ${UBSANFLAG} ${ASANFLAG} ${BOUNDSFLAGS} -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere \
