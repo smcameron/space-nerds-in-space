@@ -113,6 +113,8 @@ GLOBAL void mesh_unit_cube_uv_map(struct mesh *m);
 GLOBAL void mesh_map_xy_to_uv(struct mesh *m);
 GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion, struct osn_context *osn);
 GLOBAL struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices);
+GLOBAL struct mesh *mesh_fabricate_annular_slab(float ir, float or, int nsegments);
+GLOBAL struct mesh *mesh_fabricate_inward_cube(void);
 GLOBAL struct mesh *init_thrust_mesh(int streaks, double h, double r1);
 GLOBAL struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2);
 GLOBAL struct mesh *init_exhaust_cone_mesh(int segments, int rings, float length,

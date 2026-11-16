@@ -260,6 +260,10 @@ struct graph_dev_gl_textured_shader {
 	GLint ring_outer_radius_id;
 	GLint ring_fade_near_id;
 	GLint ring_fade_far_id;
+	GLint dust_cam_ring_pos_id;
+	GLint dust_light_ring_pos_id;
+	GLint dust_params_id;
+	GLint dust_dist_id;
 	GLint invert; /* used by alpha_by_normal shader */
 	GLint in_shade;
 	GLint water_color; /* Used for specular calculations by planet shader */
@@ -763,6 +767,10 @@ struct raster_texture_params {
 	float ring_texture_v;
 	float ring_inner_radius;
 	float ring_outer_radius;
+	float dust_cam_ring_pos[3];
+	float dust_light_ring_pos[3];
+	float dust_params[4];
+	float dust_dist[4];
 	float specular_power;
 	float specular_intensity;
 	float ambient;
@@ -870,6 +878,14 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glUniform1f(shader->ring_fade_near_id, planetary_ring_fade_near);
 	if (shader->ring_fade_far_id >= 0)
 		glUniform1f(shader->ring_fade_far_id, planetary_ring_fade_far);
+	if (shader->dust_cam_ring_pos_id >= 0)
+		glUniform3fv(shader->dust_cam_ring_pos_id, 1, p->dust_cam_ring_pos);
+	if (shader->dust_light_ring_pos_id >= 0)
+		glUniform3fv(shader->dust_light_ring_pos_id, 1, p->dust_light_ring_pos);
+	if (shader->dust_params_id >= 0)
+		glUniform4fv(shader->dust_params_id, 1, p->dust_params);
+	if (shader->dust_dist_id >= 0)
+		glUniform4fv(shader->dust_dist_id, 1, p->dust_dist);
 	if (shader->invert >= 0)
 		glUniform1f(shader->invert, p->invert);
 	if (shader->in_shade >= 0)
@@ -2929,12 +2945,27 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				&e->material_ptr->planetary_ring_dust;
 
 			rtp.shader = &planetary_ring_dust_shader;
+			rtp.texture_number = mt->texture_id;
 			rtp.do_blend = 1;
-			rtp.do_cullface = 0;
+			rtp.do_cullface = 1;
 			rtp.alpha = mt->alpha * entity_get_alpha(e);
 			texture_tint = mt->tint;
-			rtp.ring_texture_v = mt->seed;
-			rtp.textures_not_ready = 0;
+			rtp.ring_texture_v = mt->texture_v;
+			rtp.ring_inner_radius = mt->inner_radius;
+			rtp.ring_outer_radius = mt->outer_radius;
+			rtp.dust_cam_ring_pos[0] = mt->cam_ring_pos[0];
+			rtp.dust_cam_ring_pos[1] = mt->cam_ring_pos[1];
+			rtp.dust_cam_ring_pos[2] = mt->cam_ring_pos[2];
+			rtp.dust_light_ring_pos[0] = mt->light_ring_pos[0];
+			rtp.dust_light_ring_pos[1] = mt->light_ring_pos[1];
+			rtp.dust_light_ring_pos[2] = mt->light_ring_pos[2];
+			rtp.dust_params[0] = mt->planet_radius;
+			rtp.dust_params[1] = mt->half_h;
+			rtp.dust_params[2] = mt->opacity;
+			rtp.dust_params[3] = mt->cam_mode;
+			rtp.dust_dist[0] = mt->fade_dist;
+			rtp.dust_dist[1] = mt->draw_dist;
+			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
 			break;
 		case MATERIAL_WIREFRAME_SPHERE_CLIP: {
@@ -3721,6 +3752,10 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->ring_fade_far_id = glGetUniformLocation(shader->program_id, "u_ring_fade_far");
 	if (shader->ring_fade_far_id >= 0)
 		glUniform1f(shader->ring_fade_far_id, planetary_ring_fade_far);
+	shader->dust_cam_ring_pos_id = glGetUniformLocation(shader->program_id, "u_CamRingPos");
+	shader->dust_light_ring_pos_id = glGetUniformLocation(shader->program_id, "u_LightRingPos");
+	shader->dust_params_id = glGetUniformLocation(shader->program_id, "u_DustParams");
+	shader->dust_dist_id = glGetUniformLocation(shader->program_id, "u_DustDist");
 	shader->specular_power_id = glGetUniformLocation(shader->program_id, "u_SpecularPower");
 	if (shader->specular_power_id >= 0)
 		glUniform1f(shader->specular_power_id, 512.0);

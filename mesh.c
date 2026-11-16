@@ -2207,6 +2207,125 @@ bail:
 	return NULL;
 }
 
+static void set_tri_v(struct triangle *t, struct vertex *v0,
+			struct vertex *v1, struct vertex *v2)
+{
+	t->v[0] = v0;
+	t->v[1] = v1;
+	t->v[2] = v2;
+	t->flag = TRIANGLE_0_1_COPLANAR;
+}
+
+struct mesh *mesh_fabricate_annular_slab(float ir, float or, int nsegments)
+{
+	struct mesh *m;
+	int i, ti;
+
+	m = calloc(1, sizeof(*m));
+	if (!m)
+		return NULL;
+	m->nvertices = nsegments * 4;
+	m->ntriangles = nsegments * 8;
+	m->t = calloc(m->ntriangles, sizeof(*m->t));
+	m->v = calloc(m->nvertices, sizeof(*m->v));
+	if (!m->t || !m->v) {
+		mesh_free(m);
+		return NULL;
+	}
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+
+	for (i = 0; i < nsegments; i++) {
+		const float angle = (2.0f * (float) M_PI * i) / (float) nsegments;
+		const float c = cosf(angle);
+		const float s = sinf(angle);
+		int base = i * 4;
+
+		m->v[base + 0].x = c * ir;
+		m->v[base + 0].y = s * ir;
+		m->v[base + 0].z = 1.0f;
+		m->v[base + 1].x = c * or;
+		m->v[base + 1].y = s * or;
+		m->v[base + 1].z = 1.0f;
+		m->v[base + 2].x = c * ir;
+		m->v[base + 2].y = s * ir;
+		m->v[base + 2].z = -1.0f;
+		m->v[base + 3].x = c * or;
+		m->v[base + 3].y = s * or;
+		m->v[base + 3].z = -1.0f;
+	}
+
+	ti = 0;
+	for (i = 0; i < nsegments; i++) {
+		int cur = i * 4;
+		int nxt = ((i + 1) % nsegments) * 4;
+		struct vertex *it0 = &m->v[cur + 0];
+		struct vertex *ot0 = &m->v[cur + 1];
+		struct vertex *ib0 = &m->v[cur + 2];
+		struct vertex *ob0 = &m->v[cur + 3];
+		struct vertex *it1 = &m->v[nxt + 0];
+		struct vertex *ot1 = &m->v[nxt + 1];
+		struct vertex *ib1 = &m->v[nxt + 2];
+		struct vertex *ob1 = &m->v[nxt + 3];
+
+		set_tri_v(&m->t[ti++], it0, ot0, ot1);
+		set_tri_v(&m->t[ti++], it0, ot1, it1);
+		set_tri_v(&m->t[ti++], ib0, ob1, ob0);
+		set_tri_v(&m->t[ti++], ib0, ib1, ob1);
+		set_tri_v(&m->t[ti++], ob0, ob1, ot1);
+		set_tri_v(&m->t[ti++], ob0, ot1, ot0);
+		set_tri_v(&m->t[ti++], ib0, it1, ib1);
+		set_tri_v(&m->t[ti++], ib0, it0, it1);
+	}
+
+	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "planetary ring dust slab");
+	mesh_graph_dev_init(m);
+	return m;
+}
+
+struct mesh *mesh_fabricate_inward_cube(void)
+{
+	static const int faces[12][3] = {
+		{ 1, 7, 3 }, { 1, 5, 7 }, /* +X face, inward -x */
+		{ 0, 2, 6 }, { 0, 6, 4 }, /* -X face, inward +x */
+		{ 2, 7, 6 }, { 2, 3, 7 }, /* +Y face, inward -y */
+		{ 0, 4, 5 }, { 0, 5, 1 }, /* -Y face, inward +y */
+		{ 4, 6, 7 }, { 4, 7, 5 }, /* +Z face, inward -z */
+		{ 0, 3, 2 }, { 0, 1, 3 }, /* -Z face, inward +z */
+	};
+	struct mesh *m;
+	int i;
+
+	m = calloc(1, sizeof(*m));
+	if (!m)
+		return NULL;
+	m->nvertices = 8;
+	m->ntriangles = 12;
+	m->t = calloc(m->ntriangles, sizeof(*m->t));
+	m->v = calloc(m->nvertices, sizeof(*m->v));
+	if (!m->t || !m->v) {
+		mesh_free(m);
+		return NULL;
+	}
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+
+	for (i = 0; i < 8; i++) {
+		m->v[i].x = (i & 1) ? 1.0f : -1.0f;
+		m->v[i].y = (i & 2) ? 1.0f : -1.0f;
+		m->v[i].z = (i & 4) ? 1.0f : -1.0f;
+	}
+	for (i = 0; i < 12; i++)
+		set_tri_v(&m->t[i], &m->v[faces[i][0]],
+			&m->v[faces[i][1]], &m->v[faces[i][2]]);
+
+	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "inward cube");
+	mesh_graph_dev_init(m);
+	return m;
+}
+
 static void __attribute__((unused)) uniform_random_point_in_spehere(float r, float *x, float *y)
 {
 	float a = M_PI * snis_random_float();

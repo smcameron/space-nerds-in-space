@@ -322,8 +322,19 @@ struct material_particles {
 };
 
 struct material_planetary_ring_dust {
+	int texture_id;
 	float alpha;
-	float seed;
+	float texture_v;
+	float inner_radius;
+	float outer_radius;
+	float planet_radius;
+	float half_h;
+	float opacity;
+	float fade_dist;
+	float draw_dist;
+	float cam_mode;
+	float cam_ring_pos[3];
+	float light_ring_pos[3];
 	struct sng_color tint;
 };
 

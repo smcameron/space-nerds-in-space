@@ -10,7 +10,6 @@
 #define PLANETARY_RING_TEXTURE "textures/planetary-ring0.png"
 #define PLANETARY_RING_DAMAGE_DIST 50.0
 #define PLANETARY_RING_CELL_SIZE 160.0f
-#define PLANETARY_RING_DUST_CELL_SIZE 320.0f
 #define PLANETARY_RING_HALF_THICKNESS 45.0f
 #define PLANETARY_RING_BUBBLE_RADIUS 5500.0f
 #define PLANETARY_RING_FADE_RADIUS 2000.0f
@@ -46,13 +45,6 @@ struct planetary_ring_rock {
 	int material_index;
 };
 
-struct planetary_ring_dust_puff {
-	union vec3 pos;
-	float radius;
-	float alpha;
-	float seed;
-};
-
 /* Function to consistently init planetary ring data */
 void init_planetary_ring_data(struct planetary_ring_data ring_data[], int nplanetary_rings,
 					uint32_t mtwist_seed, const char *ring_texture_path);
@@ -73,18 +65,6 @@ int planetary_ring_cell_rock(const union vec3 *planet_pos,
 			const struct planetary_ring_data *ring,
 			uint32_t planet_seed, int ix, int iy, int sub_index,
 			struct planetary_ring_rock *out);
-
-/* Deterministically generate a volumetric ring dust puff in dust cell (ix, iy)
- * slot sub_index with density falling off above and below the ring plane.
- * Returns 1 if populated, 0 if empty.
- */
-int planetary_ring_cell_dust(const union vec3 *planet_pos,
-			const union quat *planet_orientation,
-			float planet_radius,
-			const struct planetary_ring_data *ring,
-			uint32_t planet_seed, int ix, int iy, int sub_index,
-			float half_thickness,
-			struct planetary_ring_dust_puff *out);
 
 /* Compute rock orientation including tumble at simulation time_sec (seconds) */
 void planetary_ring_rock_spin_orientation(const struct planetary_ring_rock *rock,

@@ -434,11 +434,19 @@ void material_init_particles(struct material *m)
 void material_init_planetary_ring_dust(struct material *m)
 {
 	m->type = MATERIAL_PLANETARY_RING_DUST;
-	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	m->rotate_randomly = 0;
+	memset(&m->planetary_ring_dust, 0, sizeof(m->planetary_ring_dust));
+	m->planetary_ring_dust.texture_id = -1;
 	m->planetary_ring_dust.alpha = 1.0f;
-	m->planetary_ring_dust.seed = 0.0f;
-	m->planetary_ring_dust.tint.red = 0.82f;
-	m->planetary_ring_dust.tint.green = 0.78f;
-	m->planetary_ring_dust.tint.blue = 0.72f;
+	m->planetary_ring_dust.inner_radius = 1.3f;
+	m->planetary_ring_dust.outer_radius = 2.5f;
+	m->planetary_ring_dust.planet_radius = 1000.0f;
+	m->planetary_ring_dust.half_h = 0.1f;
+	m->planetary_ring_dust.opacity = 1.0f;
+	m->planetary_ring_dust.fade_dist = 2000.0f;
+	m->planetary_ring_dust.draw_dist = 5500.0f;
+	m->planetary_ring_dust.tint.red = 1.0f;
+	m->planetary_ring_dust.tint.green = 1.0f;
+	m->planetary_ring_dust.tint.blue = 1.0f;
 }
