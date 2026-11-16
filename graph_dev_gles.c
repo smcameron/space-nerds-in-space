@@ -289,6 +289,7 @@ static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader planetary_lightning_shader;
 static struct graph_dev_gl_textured_shader warp_gate_effect_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
+static struct graph_dev_gl_textured_shader planetary_ring_dust_shader;
 
 /* City shader: GLES never supports CSM; ring shadow support is deferred */
 static struct graph_dev_gl_textured_shader city_shader_no_csm_no_ring;
@@ -2734,6 +2735,19 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			shadow_sphere.r = vec3_cwise_max(&e->scale);
 			}
 			break;
+		case MATERIAL_PLANETARY_RING_DUST: {
+			struct material_planetary_ring_dust *mt =
+				&e->material_ptr->planetary_ring_dust;
+
+			rtp.shader = &planetary_ring_dust_shader;
+			rtp.do_blend = 1;
+			rtp.do_cullface = 0;
+			rtp.alpha = mt->alpha * entity_get_alpha(e);
+			texture_tint = mt->tint;
+			rtp.ring_texture_v = mt->seed;
+			rtp.textures_not_ready = 0;
+			}
+			break;
 		case MATERIAL_WIREFRAME_SPHERE_CLIP: {
 			wireframe_trans_shader = &trans_wireframe_with_clip_sphere_shader;
 
@@ -3659,6 +3673,8 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_shader);
 	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
 				&textured_with_sphere_shadow_shader);
+	setup_textured_shader("planetary-ring-dust", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
+				&planetary_ring_dust_shader);
 	setup_textured_shader("textured-and-lit-per-pixel",
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_lit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel",

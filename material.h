@@ -51,6 +51,7 @@ struct entity;
 #define MATERIAL_SHRAPNEL 22
 #define MATERIAL_WRECK 23
 #define MATERIAL_PARTICLES 24
+#define MATERIAL_PLANETARY_RING_DUST 25
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -320,6 +321,12 @@ struct material_particles {
 	float time;		/* seconds, for the flames' licking; wrap it as it grows */
 };
 
+struct material_planetary_ring_dust {
+	float alpha;
+	float seed;
+	struct sng_color tint;
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -344,6 +351,7 @@ struct material {
 		struct material_shrapnel shrapnel;
 		struct material_wreck wreck;
 		struct material_particles particles;
+		struct material_planetary_ring_dust planetary_ring_dust;
 	};
 	int type;
 	int billboard_type;
@@ -371,6 +379,7 @@ extern void material_init_explosion(struct material *m);
 extern void material_init_shrapnel(struct material *m);
 extern void material_init_wreck(struct material *m);
 extern void material_init_particles(struct material *m);
+extern void material_init_planetary_ring_dust(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

@@ -770,6 +770,8 @@ static float atmosphere_brightness = 0.5; /* tweakable */
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
+#define NPLANETARY_RING_DUST_MATERIALS 16
+static struct material planetary_ring_dust_material[NPLANETARY_RING_DUST_MATERIALS];
 static struct material planet_material[NPLANET_MATERIALS];
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
 static struct solarsystem_asset_spec *old_solarsystem_assets = NULL;
@@ -3685,6 +3687,24 @@ static int planetary_ring_max_asteroids = 700;
 static struct entity *planetary_ring_rock_entities[MAX_PLANETARY_RING_ROCK_ENTITIES];
 static int nplanetary_ring_rock_entities = 0;
 
+#define MAX_PLANETARY_RING_DUST_ENTITIES 1024
+static int planetary_ring_dust = 1;
+static float planetary_ring_dust_opacity = 1.0f;
+static float planetary_ring_dust_scale = 1.0f;
+static float planetary_ring_dust_thickness = 110.0f;
+static int planetary_ring_max_dust = 220;
+static struct entity *planetary_ring_dust_entities[MAX_PLANETARY_RING_DUST_ENTITIES];
+static int nplanetary_ring_dust_entities = 0;
+
+static int planetary_ring_dust_cap(void)
+{
+	if (planetary_ring_max_dust < 0)
+		return 0;
+	if (planetary_ring_max_dust > MAX_PLANETARY_RING_DUST_ENTITIES)
+		return MAX_PLANETARY_RING_DUST_ENTITIES;
+	return planetary_ring_max_dust;
+}
+
 static int planetary_ring_rock_cap(void)
 {
 	if (planetary_ring_max_asteroids < 0)
@@ -3923,6 +3943,184 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 	}
 }
 
+static void emit_planetary_ring_dust_cell(struct entity_context *cx,
+				const struct snis_entity *planet,
+				const union vec3 *planet_pos,
+				const struct planetary_ring_data *ring_data,
+				const union vec3 *cam_pos,
+				const union vec3 *cam_fwd,
+				float cos_half_cone,
+				float draw_dist, float fade_dist,
+				float thickness, float dust_scale,
+				float dust_opacity, int ix, int iy)
+{
+	int sub, cap, mat_idx;
+
+	cap = planetary_ring_dust_cap();
+	if (nplanetary_ring_dust_entities >= cap || !nebula_mesh)
+		return;
+
+	for (sub = 0; sub < 3; sub++) {
+		struct planetary_ring_dust_puff puff;
+		union vec3 to_puff;
+		struct entity *e;
+		float d_cam, puff_r, t, fade, near_fade, alpha, dot, shade;
+
+		if (nplanetary_ring_dust_entities >= cap)
+			break;
+
+		if (!planetary_ring_cell_dust(planet_pos,
+					&planet->tsd.planet.initial_orientation,
+					planet->tsd.planet.radius, ring_data,
+					planet->id, ix, iy, sub, thickness, &puff))
+			continue;
+
+		vec3_sub(&to_puff, &puff.pos, cam_pos);
+		d_cam = vec3_magnitude(&to_puff);
+		if (d_cam >= draw_dist)
+			continue;
+
+		puff_r = puff.radius * dust_scale;
+		dot = vec3_dot(&to_puff, cam_fwd);
+		if (d_cam > puff_r + 5.0f && dot < cos_half_cone * d_cam - puff_r)
+			continue;
+
+		if (d_cam <= fade_dist) {
+			fade = 1.0f;
+		} else {
+			t = (d_cam - fade_dist) / (draw_dist - fade_dist);
+			fade = 1.0f - t * t * (3.0f - 2.0f * t);
+		}
+		near_fade = (d_cam < puff_r * 0.4f) ? (d_cam / (puff_r * 0.4f)) : 1.0f;
+		alpha = puff.alpha * dust_opacity * fade * near_fade;
+		if (alpha <= 0.004f)
+			continue;
+
+		mat_idx = (int) (puff.seed * (float) NPLANETARY_RING_DUST_MATERIALS);
+		if (mat_idx < 0)
+			mat_idx = 0;
+		if (mat_idx >= NPLANETARY_RING_DUST_MATERIALS)
+			mat_idx = NPLANETARY_RING_DUST_MATERIALS - 1;
+
+		e = add_entity(cx, nebula_mesh,
+			puff.pos.v.x, puff.pos.v.y, puff.pos.v.z, WHITE);
+		if (!e)
+			continue;
+
+		update_entity_scale(e, puff_r);
+		update_entity_material(e, &planetary_ring_dust_material[mat_idx]);
+		entity_update_alpha(e, alpha);
+		update_entity_shadow_casting(e, 0);
+
+		shade = planetary_ring_rock_shade(&puff.pos, planet_pos,
+						planet->tsd.planet.radius);
+		if (shade > 0.0f)
+			entity_set_in_shade(e, shade);
+
+		planetary_ring_dust_entities[nplanetary_ring_dust_entities++] = e;
+	}
+}
+
+static void add_planet_ring_dust(struct entity_context *cx,
+				const struct snis_entity *p,
+				const union vec3 *cam_pos,
+				const union vec3 *cam_fwd,
+				float cos_half_cone)
+{
+	int ring_idx = p->tsd.planet.solarsystem_planet_type;
+	const struct material *ring_mat = NULL;
+	struct planetary_ring_data ring_data;
+	union vec3 planet_pos, u_axis, v_axis, normal, rel;
+	float cam_dz, cam_ux, cam_vy, cam_r, inner_r, outer_r, reach, dz_eff, r_plane_max;
+	float draw_dist, fade_dist, thickness, dust_scale, dust_opacity, max_puff_r;
+	int cam_ix, cam_iy, max_ring, ring_step, di, dj, cap;
+
+	if (p->tsd.planet.radius <= 0.0f)
+		return;
+	cap = planetary_ring_dust_cap();
+	if (nplanetary_ring_dust_entities >= cap || planetary_ring_dust_opacity <= 0.005f)
+		return;
+
+	if (ring_idx >= 0 && ring_idx < NPLANET_MATERIALS)
+		ring_mat = planet_material[ring_idx].textured_planet.ring_material;
+	if (!ring_mat && ring_idx >= 0 && ring_idx < NPLANETARY_RING_MATERIALS)
+		ring_mat = &planetary_ring_material[ring_idx];
+	if (!ring_mat)
+		return;
+
+	ring_data.alpha = ring_mat->textured_planet_ring.alpha;
+	ring_data.texture_v = ring_mat->textured_planet_ring.texture_v;
+	ring_data.inner_radius = ring_mat->textured_planet_ring.inner_radius;
+	ring_data.outer_radius = ring_mat->textured_planet_ring.outer_radius;
+
+	draw_dist = fmaxf(200.0f, planetary_ring_draw_dist);
+	fade_dist = fmaxf(0.0f, planetary_ring_fade_dist);
+	if (fade_dist >= draw_dist - 10.0f)
+		fade_dist = draw_dist * 0.7f;
+	thickness = fmaxf(5.0f, planetary_ring_dust_thickness);
+	dust_scale = fmaxf(0.1f, planetary_ring_dust_scale);
+	dust_opacity = fmaxf(0.0f, planetary_ring_dust_opacity);
+	max_puff_r = 380.0f * dust_scale;
+
+	planet_pos.v.x = (float) p->x;
+	planet_pos.v.y = (float) p->y;
+	planet_pos.v.z = (float) p->z;
+
+	planetary_ring_basis(&p->tsd.planet.initial_orientation, &u_axis, &v_axis, &normal);
+	vec3_sub(&rel, cam_pos, &planet_pos);
+	cam_dz = vec3_dot(&rel, &normal);
+	if (fabsf(cam_dz) > draw_dist + thickness + max_puff_r)
+		return;
+
+	cam_ux = vec3_dot(&rel, &u_axis);
+	cam_vy = vec3_dot(&rel, &v_axis);
+	cam_r = hypotf(cam_ux, cam_vy);
+	inner_r = ring_data.inner_radius * p->tsd.planet.radius;
+	outer_r = ring_data.outer_radius * p->tsd.planet.radius;
+	reach = draw_dist + max_puff_r;
+	if (cam_r < inner_r - reach || cam_r > outer_r + reach)
+		return;
+
+	dz_eff = fmaxf(0.0f, fabsf(cam_dz) - (thickness + max_puff_r));
+	r_plane_max = sqrtf(fmaxf(0.0f, draw_dist * draw_dist - dz_eff * dz_eff)) + max_puff_r;
+	max_ring = (int) ceilf(r_plane_max / PLANETARY_RING_DUST_CELL_SIZE) + 1;
+	cam_ix = (int) floorf(cam_ux / PLANETARY_RING_DUST_CELL_SIZE);
+	cam_iy = (int) floorf(cam_vy / PLANETARY_RING_DUST_CELL_SIZE);
+
+	emit_planetary_ring_dust_cell(cx, p, &planet_pos, &ring_data, cam_pos, cam_fwd,
+				cos_half_cone, draw_dist, fade_dist, thickness,
+				dust_scale, dust_opacity, cam_ix, cam_iy);
+
+	for (ring_step = 1; ring_step <= max_ring &&
+			nplanetary_ring_dust_entities < cap;
+			ring_step++) {
+		for (di = -ring_step; di <= ring_step; di++) {
+			emit_planetary_ring_dust_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						draw_dist, fade_dist, thickness,
+						dust_scale, dust_opacity,
+						cam_ix + di, cam_iy - ring_step);
+			emit_planetary_ring_dust_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						draw_dist, fade_dist, thickness,
+						dust_scale, dust_opacity,
+						cam_ix + di, cam_iy + ring_step);
+		}
+		for (dj = -ring_step + 1; dj <= ring_step - 1; dj++) {
+			emit_planetary_ring_dust_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						draw_dist, fade_dist, thickness,
+						dust_scale, dust_opacity,
+						cam_ix - ring_step, cam_iy + dj);
+			emit_planetary_ring_dust_cell(cx, p, &planet_pos, &ring_data,
+						cam_pos, cam_fwd, cos_half_cone,
+						draw_dist, fade_dist, thickness,
+						dust_scale, dust_opacity,
+						cam_ix + ring_step, cam_iy + dj);
+		}
+	}
+}
+
 static void add_planetary_ring_rock_entities(struct entity_context *cx)
 {
 	float camx, camy, camz, lookx, looky, lookz;
@@ -3933,7 +4131,6 @@ static void add_planetary_ring_rock_entities(struct entity_context *cx)
 
 	if (!planetary_ring_asteroids) {
 		graph_dev_set_planetary_ring_fade(0.0f, -1.0f);
-		return;
 	} else {
 		float draw_dist = fmaxf(100.0f, planetary_ring_draw_dist);
 		float fade_dist = fmaxf(0.0f, planetary_ring_fade_dist);
@@ -3947,6 +4144,10 @@ static void add_planetary_ring_rock_entities(struct entity_context *cx)
 	}
 
 	nplanetary_ring_rock_entities = 0;
+	nplanetary_ring_dust_entities = 0;
+
+	if (!planetary_ring_asteroids && !planetary_ring_dust)
+		return;
 
 	camera_get_pos(cx, &camx, &camy, &camz);
 	camera_get_look_at(cx, &lookx, &looky, &lookz);
@@ -3974,9 +4175,18 @@ static void add_planetary_ring_rock_entities(struct entity_context *cx)
 	for (i = 0; i <= highest; i++) {
 		if (!go[i].alive || go[i].type != OBJTYPE_PLANET || !go[i].tsd.planet.ring)
 			continue;
-		add_planet_ring_rocks(cx, &go[i], &cam_pos, &cam_fwd,
-				cos_half_cone, time_sec);
-		if (nplanetary_ring_rock_entities >= planetary_ring_rock_cap())
+		if (planetary_ring_asteroids &&
+				nplanetary_ring_rock_entities < planetary_ring_rock_cap())
+			add_planet_ring_rocks(cx, &go[i], &cam_pos, &cam_fwd,
+					cos_half_cone, time_sec);
+		if (planetary_ring_dust &&
+				nplanetary_ring_dust_entities < planetary_ring_dust_cap())
+			add_planet_ring_dust(cx, &go[i], &cam_pos, &cam_fwd,
+					cos_half_cone);
+		if ((!planetary_ring_asteroids ||
+				nplanetary_ring_rock_entities >= planetary_ring_rock_cap()) &&
+				(!planetary_ring_dust ||
+				nplanetary_ring_dust_entities >= planetary_ring_dust_cap()))
 			break;
 	}
 }
@@ -3988,6 +4198,9 @@ static void remove_planetary_ring_rock_entities(struct entity_context *cx)
 	for (i = 0; i < nplanetary_ring_rock_entities; i++)
 		remove_entity(cx, planetary_ring_rock_entities[i]);
 	nplanetary_ring_rock_entities = 0;
+	for (i = 0; i < nplanetary_ring_dust_entities; i++)
+		remove_entity(cx, planetary_ring_dust_entities[i]);
+	nplanetary_ring_dust_entities = 0;
 }
 
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
@@ -21089,6 +21302,16 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&planetary_ring_fade_dist, 'f', 200.0, 14000.0, PLANETARY_RING_FADE_RADIUS, 0, 0, 0, 0, },
 	{ "PLANETARY_RING_MAX_ASTEROIDS", "MAX NUMBER OF 3D RING ASTEROIDS DRAWN PER FRAME",
 		&planetary_ring_max_asteroids, 'i', 50.0, 2048.0, 700.0, 50, 2048, 700, 0, },
+	{ "PLANETARY_RING_DUST", "1 - ENABLE VOLUMETRIC DUST IN PLANETARY RINGS, 0 - DISABLE",
+		&planetary_ring_dust, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
+	{ "PLANETARY_RING_DUST_OPACITY", "OPACITY MULTIPLIER FOR VOLUMETRIC PLANETARY RING DUST",
+		&planetary_ring_dust_opacity, 'f', 0.0, 3.0, 1.0, 0, 0, 0, 0, },
+	{ "PLANETARY_RING_DUST_SCALE", "PUFF SIZE MULTIPLIER FOR VOLUMETRIC PLANETARY RING DUST",
+		&planetary_ring_dust_scale, 'f', 0.2, 4.0, 1.0, 0, 0, 0, 0, },
+	{ "PLANETARY_RING_DUST_THICKNESS", "VERTICAL SCALE HEIGHT OF VOLUMETRIC PLANETARY RING DUST",
+		&planetary_ring_dust_thickness, 'f', 20.0, 400.0, 110.0, 0, 0, 0, 0, },
+	{ "PLANETARY_RING_MAX_DUST", "MAX NUMBER OF VOLUMETRIC RING DUST PUFFS DRAWN PER FRAME",
+		&planetary_ring_max_dust, 'i', 20.0, 1024.0, 220.0, 20, 1024, 220, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -25795,6 +26018,11 @@ static int load_static_textures(void)
 		planetary_ring_material[i].textured_planet_ring.outer_radius = ring_data[i].outer_radius;
 	}
 	free(ring_data);
+	for (i = 0; i < NPLANETARY_RING_DUST_MATERIALS; i++) {
+		material_init_planetary_ring_dust(&planetary_ring_dust_material[i]);
+		planetary_ring_dust_material[i].planetary_ring_dust.seed =
+			(float) i / (float) NPLANETARY_RING_DUST_MATERIALS;
+	}
 
 	material_init_textured_shield(&shield_material);
 	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-", 1);

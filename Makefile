@@ -253,6 +253,7 @@ SHADERS=$(addprefix ${SHADERSRCDIR}/,atmosphere.frag atmosphere.vert \
 	textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader \
 	textured-particle.frag textured-particle.vert textured.shader \
 	textured-with-sphere-shadow-per-pixel.shader \
+	planetary-ring-dust.shader \
 	wireframe_filled.frag wireframe_filled.vert \
 	wireframe_transparent.frag wireframe-transparent-sphere-clip.frag \
 	wireframe-transparent-sphere-clip.vert wireframe_transparent.vert \

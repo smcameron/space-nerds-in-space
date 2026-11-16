@@ -169,6 +169,7 @@ extern int graph_dev_entity_render_order(struct entity *e)
 	case MATERIAL_EXHAUST_PLUME:
 	case MATERIAL_EXPLOSION:
 	case MATERIAL_PARTICLES:
+	case MATERIAL_PLANETARY_RING_DUST:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:

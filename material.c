@@ -430,3 +430,15 @@ void material_init_particles(struct material *m)
 	m->particles.albedo = 0.12;
 	m->particles.time = 0.0;
 }
+
+void material_init_planetary_ring_dust(struct material *m)
+{
+	m->type = MATERIAL_PLANETARY_RING_DUST;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	m->rotate_randomly = 0;
+	m->planetary_ring_dust.alpha = 1.0f;
+	m->planetary_ring_dust.seed = 0.0f;
+	m->planetary_ring_dust.tint.red = 0.82f;
+	m->planetary_ring_dust.tint.green = 0.78f;
+	m->planetary_ring_dust.tint.blue = 0.72f;
+}
