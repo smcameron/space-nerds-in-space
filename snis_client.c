@@ -3746,6 +3746,28 @@ static float planetary_ring_rock_shade(const union vec3 *rock_pos,
 	return (float) disc_occlusion_fraction(a, b, sep);
 }
 
+static const struct material *get_planet_ring_material(const struct snis_entity *p,
+						struct planetary_ring_data *ring_data)
+{
+	int ring_idx = p->tsd.planet.solarsystem_planet_type;
+	const struct material *ring_mat = NULL;
+
+	if (ring_idx >= 0 && ring_idx < NPLANET_MATERIALS)
+		ring_mat = planet_material[ring_idx].textured_planet.ring_material;
+	if (!ring_mat && ring_idx >= 0 && ring_idx < NPLANETARY_RING_MATERIALS)
+		ring_mat = &planetary_ring_material[ring_idx];
+	if (!ring_mat)
+		return NULL;
+
+	if (ring_data) {
+		ring_data->alpha = ring_mat->textured_planet_ring.alpha;
+		ring_data->texture_v = ring_mat->textured_planet_ring.texture_v;
+		ring_data->inner_radius = ring_mat->textured_planet_ring.inner_radius;
+		ring_data->outer_radius = ring_mat->textured_planet_ring.outer_radius;
+	}
+	return ring_mat;
+}
+
 static void emit_planetary_ring_cell(struct entity_context *cx,
 				const struct snis_entity *planet,
 				const union vec3 *planet_pos,
@@ -3849,8 +3871,7 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 				const union vec3 *cam_fwd,
 				float cos_half_cone, double time_sec)
 {
-	int ring_idx = p->tsd.planet.solarsystem_planet_type;
-	const struct material *ring_mat = NULL;
+	const struct material *ring_mat;
 	struct planetary_ring_data ring_data;
 	union vec3 planet_pos, u_axis, v_axis, normal, rel;
 	float cam_dz, cam_ux, cam_vy, cam_r, inner_r, outer_r, reach, dz_eff, r_plane_max;
@@ -3863,17 +3884,9 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 	if (nplanetary_ring_rock_entities >= cap)
 		return;
 	draw_dist = fmaxf(100.0f, planetary_ring_draw_dist);
-	if (ring_idx >= 0 && ring_idx < NPLANET_MATERIALS)
-		ring_mat = planet_material[ring_idx].textured_planet.ring_material;
-	if (!ring_mat && ring_idx >= 0 && ring_idx < NPLANETARY_RING_MATERIALS)
-		ring_mat = &planetary_ring_material[ring_idx];
+	ring_mat = get_planet_ring_material(p, &ring_data);
 	if (!ring_mat)
 		return;
-
-	ring_data.alpha = ring_mat->textured_planet_ring.alpha;
-	ring_data.texture_v = ring_mat->textured_planet_ring.texture_v;
-	ring_data.inner_radius = ring_mat->textured_planet_ring.inner_radius;
-	ring_data.outer_radius = ring_mat->textured_planet_ring.outer_radius;
 
 	planet_pos.v.x = (float) p->x;
 	planet_pos.v.y = (float) p->y;
@@ -12807,6 +12820,136 @@ static void draw_sciplane_tooltip(int mousex, int mousey, char *tooltip)
 	draw_tooltip_color(mousex, mousey, tooltip, UI_COLOR(sciplane_tooltip));
 }
 
+#define MAX_SCIENCE_RING_METEOROIDS 300
+
+static void draw_sciplane_ring_cell(struct entity_context *cx,
+				const struct snis_entity *p,
+				const union vec3 *planet_pos,
+				const struct planetary_ring_data *ring_data,
+				const union vec3 *ship_pos,
+				float ship_ux, float ship_vy,
+				float r_plane_max, float eff_range,
+				int ix, int iy, int *blips_left)
+{
+	struct planetary_ring_rock rock;
+	union vec3 dir, display_pos;
+	float cell_ux, cell_vy, sx, sy;
+	double dist, heading, mark;
+
+	if (*blips_left <= 0)
+		return;
+
+	cell_ux = ((float) ix + 0.5f) * PLANETARY_RING_CELL_SIZE;
+	cell_vy = ((float) iy + 0.5f) * PLANETARY_RING_CELL_SIZE;
+	if (hypotf(cell_ux - ship_ux, cell_vy - ship_vy) >
+			r_plane_max + PLANETARY_RING_CELL_SIZE * 0.75f)
+		return;
+
+	if (!planetary_ring_cell_rock(planet_pos,
+					&p->tsd.planet.initial_orientation,
+					p->tsd.planet.radius, ring_data,
+					p->id, ix, iy, 0, &rock))
+		return;
+
+	vec3_sub(&dir, &rock.pos, ship_pos);
+	dist = vec3_magnitude(&dir);
+	if (dist > (double) eff_range)
+		return;
+
+	vec3_to_heading_mark(&dir, 0, &heading, &mark);
+	heading_mark_to_vec3(dist, heading, 0, &display_pos);
+	vec3_add_self(&display_pos, ship_pos);
+
+	if (!transform_point(cx, display_pos.v.x, display_pos.v.y,
+				display_pos.v.z, &sx, &sy)) {
+		snis_draw_line(sx - 1, sy, sx + 1, sy);
+		snis_draw_line(sx, sy - 1, sx, sy + 1);
+		(*blips_left)--;
+	}
+}
+
+static void draw_sciplane_planet_ring_meteoroids(struct entity_context *cx,
+						const struct snis_entity *p,
+						const union vec3 *ship_pos,
+						double range, int *blips_left)
+{
+	const struct material *ring_mat;
+	struct planetary_ring_data ring_data;
+	union vec3 planet_pos, u_axis, v_axis, normal, rel;
+	float eff_range, ship_dz, ship_ux, ship_vy, ship_r;
+	float inner_r, outer_r, reach, dz_eff, r_plane_max;
+	int ship_ix, ship_iy, max_ring, ring_step, di, dj;
+
+	if (p->tsd.planet.radius <= 0.0f || *blips_left <= 0)
+		return;
+	ring_mat = get_planet_ring_material(p, &ring_data);
+	if (!ring_mat)
+		return;
+
+	eff_range = fminf((float) range, fmaxf(100.0f, planetary_ring_draw_dist));
+	planet_pos.v.x = (float) p->x;
+	planet_pos.v.y = (float) p->y;
+	planet_pos.v.z = (float) p->z;
+
+	planetary_ring_basis(&p->tsd.planet.initial_orientation,
+			&u_axis, &v_axis, &normal);
+	vec3_sub(&rel, ship_pos, &planet_pos);
+	ship_dz = vec3_dot(&rel, &normal);
+	if (fabsf(ship_dz) > eff_range +
+			PLANETARY_RING_HALF_THICKNESS + PLANETARY_RING_MAX_ROCK_RADIUS)
+		return;
+
+	ship_ux = vec3_dot(&rel, &u_axis);
+	ship_vy = vec3_dot(&rel, &v_axis);
+	ship_r = hypotf(ship_ux, ship_vy);
+	inner_r = ring_data.inner_radius * p->tsd.planet.radius;
+	outer_r = ring_data.outer_radius * p->tsd.planet.radius;
+	reach = eff_range + PLANETARY_RING_MAX_ROCK_RADIUS;
+	if (ship_r < inner_r - reach || ship_r > outer_r + reach)
+		return;
+
+	dz_eff = fmaxf(0.0f, fabsf(ship_dz) -
+		(PLANETARY_RING_HALF_THICKNESS + PLANETARY_RING_MAX_ROCK_RADIUS));
+	r_plane_max = sqrtf(fmaxf(0.0f,
+			eff_range * eff_range - dz_eff * dz_eff)) +
+		PLANETARY_RING_MAX_ROCK_RADIUS;
+	max_ring = (int) ceilf(r_plane_max / PLANETARY_RING_CELL_SIZE) + 1;
+	ship_ix = (int) floorf(ship_ux / PLANETARY_RING_CELL_SIZE);
+	ship_iy = (int) floorf(ship_vy / PLANETARY_RING_CELL_SIZE);
+
+	sng_set_foreground(UI_COLOR(sci_ball_asteroid));
+	draw_sciplane_ring_cell(cx, p, &planet_pos, &ring_data, ship_pos,
+				ship_ux, ship_vy, r_plane_max, eff_range,
+				ship_ix, ship_iy, blips_left);
+
+	for (ring_step = 1; ring_step <= max_ring && *blips_left > 0; ring_step++) {
+		for (di = -ring_step; di <= ring_step && *blips_left > 0; di++) {
+			draw_sciplane_ring_cell(cx, p, &planet_pos, &ring_data,
+						ship_pos, ship_ux, ship_vy,
+						r_plane_max, eff_range,
+						ship_ix + di, ship_iy - ring_step,
+						blips_left);
+			draw_sciplane_ring_cell(cx, p, &planet_pos, &ring_data,
+						ship_pos, ship_ux, ship_vy,
+						r_plane_max, eff_range,
+						ship_ix + di, ship_iy + ring_step,
+						blips_left);
+		}
+		for (dj = -ring_step + 1; dj <= ring_step - 1 && *blips_left > 0; dj++) {
+			draw_sciplane_ring_cell(cx, p, &planet_pos, &ring_data,
+						ship_pos, ship_ux, ship_vy,
+						r_plane_max, eff_range,
+						ship_ix - ring_step, ship_iy + dj,
+						blips_left);
+			draw_sciplane_ring_cell(cx, p, &planet_pos, &ring_data,
+						ship_pos, ship_ux, ship_vy,
+						r_plane_max, eff_range,
+						ship_ix + ring_step, ship_iy + dj,
+						blips_left);
+		}
+	}
+}
+
 static void draw_sciplane_display(struct snis_entity *o, double range)
 {
 	static struct mesh *ring_mesh = 0;
@@ -13298,6 +13441,18 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		/* draw in the laserbeams */
 		for (i = 0; i < nlaserbeams; i++) {
 			draw_sciplane_laserbeam(instrumentecx, o, laserbeams[i], range);
+		}
+
+		if (planetary_ring_asteroids) {
+			int blips_left = MAX_SCIENCE_RING_METEOROIDS;
+
+			for (i = 0; i <= snis_object_pool_highest_object(pool) && blips_left > 0; i++) {
+				if (!go[i].alive || go[i].type != OBJTYPE_PLANET ||
+						!go[i].tsd.planet.ring)
+					continue;
+				draw_sciplane_planet_ring_meteoroids(instrumentecx, &go[i],
+								&ship_pos, range, &blips_left);
+			}
 		}
 
 		pthread_mutex_unlock(&universe_mutex);
