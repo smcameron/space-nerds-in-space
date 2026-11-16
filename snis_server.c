@@ -4513,6 +4513,72 @@ static void missile_collision_detection(void *context, void *entity)
 	}
 }
 
+static int check_projectile_ring_rock_collision(struct snis_entity *o,
+						struct snis_entity *planet,
+						double dist2_to_planet,
+						float proj_radius,
+						uint32_t shooter_id,
+						int hit_sound)
+{
+	union vec3 ring_center, sample_pos, sep;
+	struct planetary_ring_rock hit_rock;
+	float radius, outer_reach, speed, sep_len;
+	int index, steps, s;
+
+	if (!planet->tsd.planet.ring || planet->tsd.planet.radius <= 0.0f)
+		return 0;
+
+	index = planet->tsd.planet.solarsystem_planet_type;
+	if (index < 0 || index >= NPLANETARY_RING_MATERIALS)
+		return 0;
+
+	radius = planet->tsd.planet.radius;
+	speed = (float) sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+	outer_reach = planetary_ring_data[index].outer_radius * radius +
+		PLANETARY_RING_MAX_ROCK_RADIUS + proj_radius + speed;
+	if (dist2_to_planet > (double) outer_reach * (double) outer_reach)
+		return 0;
+
+	ring_center.v.x = (float) planet->x;
+	ring_center.v.y = (float) planet->y;
+	ring_center.v.z = (float) planet->z;
+
+	steps = (int) ceilf(fmaxf(1.0f, speed / 30.0f));
+	if (steps > 8)
+		steps = 8;
+
+	for (s = 1; s <= steps; s++) {
+		float f = (float) s / (float) steps - 1.0f;
+
+		sample_pos.v.x = (float) (o->x + o->vx * f);
+		sample_pos.v.y = (float) (o->y + o->vy * f);
+		sample_pos.v.z = (float) (o->z + o->vz * f);
+
+		if (planetary_ring_find_rock_collision(&sample_pos, proj_radius,
+				&ring_center, &planet->tsd.planet.initial_orientation,
+				radius, &planetary_ring_data[index], planet->id,
+				&hit_rock)) {
+			vec3_sub(&sep, &sample_pos, &hit_rock.pos);
+			sep_len = vec3_magnitude(&sep);
+			if (sep_len > 1e-4f) {
+				vec3_mul_self(&sep, hit_rock.radius / sep_len);
+			} else {
+				sep.v.x = 0.0f;
+				sep.v.y = 0.0f;
+				sep.v.z = 0.0f;
+			}
+			o->alive = 0;
+			(void) add_explosion(hit_rock.pos.v.x + sep.v.x,
+					hit_rock.pos.v.y + sep.v.y,
+					hit_rock.pos.v.z + sep.v.z,
+					50, 10, 15, OBJTYPE_SPARK);
+			snis_queue_add_sound(hit_sound, ROLE_SOUNDSERVER, shooter_id);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *t = entity;  /* target */
@@ -4523,7 +4589,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	uint32_t impact_time;
 	double impact_fractional_time;
 
-	if (!t->alive)
+	if (!o->alive || !t->alive)
 		return;
 	if (t == o)
 		return;
@@ -4583,6 +4649,10 @@ static void torpedo_collision_detection(void *context, void *entity)
 				(double) o->tsd.torpedo.ship_id);
 		if (rts_mode)
 			inflict_rts_main_base_torpedo_damage(o, t);
+	} else if (t->type == OBJTYPE_PLANET) {
+		(void) check_projectile_ring_rock_collision(o, t, dist2, 8.0f,
+				o->tsd.torpedo.ship_id, TORPEDO_HIT_SOUND);
+		return;
 	} else if (dist2 > TORPEDO_DETONATE_DIST2)
 		return; /* not close enough */
 
@@ -4811,15 +4881,22 @@ static void laser_collision_detection(void *context, void *entity)
 	uint32_t impact_time;
 	float delta_t;
 
-	if (!t->alive)
+	if (!o->alive || !t->alive)
 		return;
 	if (t == o)
 		return;
 	if (t->type != OBJTYPE_BRIDGE && t->type != OBJTYPE_NPCSHIP &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
 		t->type != OBJTYPE_TORPEDO && t->type != OBJTYPE_CARGO_CONTAINER &&
+		t->type != OBJTYPE_PLANET &&
 		t->type != OBJTYPE_BLOCK && t->type != OBJTYPE_SPACEMONSTER)
 		return;
+
+	if (t->type == OBJTYPE_PLANET) {
+		(void) check_projectile_ring_rock_collision(o, t, object_dist2(t, o),
+				8.0f, o->tsd.laser.ship_id, PHASER_HIT_SOUND);
+		return;
+	}
 
 	if (t->type == OBJTYPE_BLOCK) {
 		double dist2;
