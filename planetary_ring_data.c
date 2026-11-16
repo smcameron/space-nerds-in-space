@@ -300,11 +300,11 @@ static int ring_cell_rock_with_basis(const union vec3 *planet_pos,
 	size_u = ring_hash_float(h_size);
 	size_u = size_u * size_u;
 	if (sub_index == 0) {
-		desired_r = (12.0f + 30.0f * size_u) * (0.70f + 0.30f * density);
+		desired_r = (5.0f + 15.0f * size_u) * (0.70f + 0.30f * density);
 		if (desired_r > PLANETARY_RING_MAX_ROCK_RADIUS)
 			desired_r = PLANETARY_RING_MAX_ROCK_RADIUS;
 	} else {
-		desired_r = 3.0f + 8.0f * size_u;
+		desired_r = 1.5f + 4.0f * size_u;
 	}
 	out->radius = desired_r;
 	out->scale = desired_r / ring_asteroid_radius[out->model];

@@ -15,7 +15,7 @@
 #define PLANETARY_RING_FADE_RADIUS 2400.0f
 #define PLANETARY_RING_SMALL_BUBBLE_RADIUS 1400.0f
 #define PLANETARY_RING_SMALL_FADE_RADIUS 950.0f
-#define PLANETARY_RING_MAX_ROCK_RADIUS 48.0f
+#define PLANETARY_RING_MAX_ROCK_RADIUS 24.0f
 
 /* I'm duplicating most of struct material_textured_planet_ring from material.h here
  * because that includes struct sng_color, defined in snis_graph.h

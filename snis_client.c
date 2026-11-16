@@ -3678,6 +3678,7 @@ static void remove_ship_death_entities(struct entity_context *cx)
 
 #define MAX_PLANETARY_RING_ROCK_ENTITIES 320
 static int planetary_ring_asteroids = 1;
+static float planetary_ring_asteroid_scale = 1.0f;
 static struct entity *planetary_ring_rock_entities[MAX_PLANETARY_RING_ROCK_ENTITIES];
 static int nplanetary_ring_rock_entities = 0;
 
@@ -3769,7 +3770,8 @@ static void emit_planetary_ring_cell(struct entity_context *cx,
 			continue;
 
 		dot = vec3_dot(&to_rock, cam_fwd);
-		if (d_cam > rock.radius + 5.0f && dot < cos_half_cone * d_cam - rock.radius)
+		if (d_cam > rock.radius * planetary_ring_asteroid_scale + 5.0f &&
+				dot < cos_half_cone * d_cam - rock.radius * planetary_ring_asteroid_scale)
 			continue;
 
 		fade_start = (sub == 0) ? PLANETARY_RING_FADE_RADIUS :
@@ -3793,7 +3795,7 @@ static void emit_planetary_ring_cell(struct entity_context *cx,
 			continue;
 
 		planetary_ring_rock_spin_orientation(&rock, time_sec, &orient);
-		update_entity_scale(e, rock.scale * fade);
+		update_entity_scale(e, rock.scale * planetary_ring_asteroid_scale * fade);
 		update_entity_material(e, &asteroid_material[mat_idx]);
 		if (asteroid_lp_mesh[model])
 			entity_set_low_poly_mesh(e, asteroid_lp_mesh[model]);
@@ -21041,6 +21043,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&leave_no_orphans, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
 	{ "PLANETARY_RING_ASTEROIDS", "1 - ENABLE INDIVIDUAL 3D ASTEROIDS IN PLANETARY RINGS, 0 - DISABLE",
 		&planetary_ring_asteroids, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
+	{ "PLANETARY_RING_ASTEROID_SCALE", "SIZE MULTIPLIER FOR 3D ASTEROIDS IN PLANETARY RINGS",
+		&planetary_ring_asteroid_scale, 'f', 0.1, 5.0, 1.0, 0, 0, 0, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
