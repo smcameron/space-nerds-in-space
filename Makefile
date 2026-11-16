@@ -1177,7 +1177,7 @@ ${OD}/snis-console.o:	snis-console.c string-utils.h
 	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -c -o ${OD}/snis-console.o snis-console.c
 
 bin/snis-console:	${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
-	$(CC) -pthread -o bin/snis-console ${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o -lncurses
+	$(CC) -pthread -o bin/snis-console ${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o -lncurses -ltinfo
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.h
 
