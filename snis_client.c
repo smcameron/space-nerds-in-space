@@ -3676,11 +3676,23 @@ static void remove_ship_death_entities(struct entity_context *cx)
 	}
 }
 
-#define MAX_PLANETARY_RING_ROCK_ENTITIES 320
+#define MAX_PLANETARY_RING_ROCK_ENTITIES 2048
 static int planetary_ring_asteroids = 1;
 static float planetary_ring_asteroid_scale = 1.0f;
+static float planetary_ring_draw_dist = PLANETARY_RING_BUBBLE_RADIUS;
+static float planetary_ring_fade_dist = PLANETARY_RING_FADE_RADIUS;
+static int planetary_ring_max_asteroids = 700;
 static struct entity *planetary_ring_rock_entities[MAX_PLANETARY_RING_ROCK_ENTITIES];
 static int nplanetary_ring_rock_entities = 0;
+
+static int planetary_ring_rock_cap(void)
+{
+	if (planetary_ring_max_asteroids < 0)
+		return 0;
+	if (planetary_ring_max_asteroids > MAX_PLANETARY_RING_ROCK_ENTITIES)
+		return MAX_PLANETARY_RING_ROCK_ENTITIES;
+	return planetary_ring_max_asteroids;
+}
 
 static float planetary_ring_rock_shade(const union vec3 *rock_pos,
 					const union vec3 *planet_pos,
@@ -3733,16 +3745,23 @@ static void emit_planetary_ring_cell(struct entity_context *cx,
 				float cam_ux, float cam_vy, float dz_eff,
 				double time_sec, int ix, int iy)
 {
-	float cell_dx, cell_dy, cell_d2, small_lim;
-	int sub, max_sub;
+	float cell_dx, cell_dy, cell_d2, small_lim, draw_dist, fade_dist;
+	int sub, max_sub, cap;
 
-	if (nplanetary_ring_rock_entities >= MAX_PLANETARY_RING_ROCK_ENTITIES)
+	cap = planetary_ring_rock_cap();
+	if (nplanetary_ring_rock_entities >= cap)
 		return;
+
+	draw_dist = fmaxf(100.0f, planetary_ring_draw_dist);
+	fade_dist = fmaxf(0.0f, planetary_ring_fade_dist);
+	if (fade_dist >= draw_dist - 10.0f)
+		fade_dist = draw_dist * 0.7f;
 
 	cell_dx = ((float) ix + 0.5f) * PLANETARY_RING_CELL_SIZE - cam_ux;
 	cell_dy = ((float) iy + 0.5f) * PLANETARY_RING_CELL_SIZE - cam_vy;
 	cell_d2 = cell_dx * cell_dx + cell_dy * cell_dy + dz_eff * dz_eff;
-	small_lim = PLANETARY_RING_SMALL_BUBBLE_RADIUS + PLANETARY_RING_CELL_SIZE;
+	small_lim = fminf(draw_dist, PLANETARY_RING_SMALL_BUBBLE_RADIUS) +
+		PLANETARY_RING_CELL_SIZE;
 	max_sub = (cell_d2 <= small_lim * small_lim) ? 3 : 1;
 
 	for (sub = 0; sub < max_sub; sub++) {
@@ -3753,7 +3772,7 @@ static void emit_planetary_ring_cell(struct entity_context *cx,
 		float d_cam, max_b, fade_start, t, fade, dot, shade;
 		int model, mat_idx;
 
-		if (nplanetary_ring_rock_entities >= MAX_PLANETARY_RING_ROCK_ENTITIES)
+		if (nplanetary_ring_rock_entities >= cap)
 			break;
 
 		if (!planetary_ring_cell_rock(planet_pos,
@@ -3764,8 +3783,8 @@ static void emit_planetary_ring_cell(struct entity_context *cx,
 
 		vec3_sub(&to_rock, &rock.pos, cam_pos);
 		d_cam = vec3_magnitude(&to_rock);
-		max_b = (sub == 0) ? PLANETARY_RING_BUBBLE_RADIUS :
-			PLANETARY_RING_SMALL_BUBBLE_RADIUS;
+		max_b = (sub == 0) ? draw_dist :
+			fminf(draw_dist, PLANETARY_RING_SMALL_BUBBLE_RADIUS);
 		if (d_cam >= max_b)
 			continue;
 
@@ -3774,8 +3793,10 @@ static void emit_planetary_ring_cell(struct entity_context *cx,
 				dot < cos_half_cone * d_cam - rock.radius * planetary_ring_asteroid_scale)
 			continue;
 
-		fade_start = (sub == 0) ? PLANETARY_RING_FADE_RADIUS :
-			PLANETARY_RING_SMALL_FADE_RADIUS;
+		fade_start = (sub == 0) ? fade_dist :
+			fminf(fade_dist, PLANETARY_RING_SMALL_FADE_RADIUS);
+		if (fade_start >= max_b - 1.0f)
+			fade_start = max_b * 0.7f;
 		if (d_cam <= fade_start) {
 			fade = 1.0f;
 		} else {
@@ -3822,10 +3843,15 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 	struct planetary_ring_data ring_data;
 	union vec3 planet_pos, u_axis, v_axis, normal, rel;
 	float cam_dz, cam_ux, cam_vy, cam_r, inner_r, outer_r, reach, dz_eff, r_plane_max;
-	int cam_ix, cam_iy, max_ring, ring_step, di, dj;
+	float draw_dist;
+	int cam_ix, cam_iy, max_ring, ring_step, di, dj, cap;
 
 	if (p->tsd.planet.radius <= 0.0f)
 		return;
+	cap = planetary_ring_rock_cap();
+	if (nplanetary_ring_rock_entities >= cap)
+		return;
+	draw_dist = fmaxf(100.0f, planetary_ring_draw_dist);
 	if (ring_idx >= 0 && ring_idx < NPLANET_MATERIALS)
 		ring_mat = planet_material[ring_idx].textured_planet.ring_material;
 	if (!ring_mat && ring_idx >= 0 && ring_idx < NPLANETARY_RING_MATERIALS)
@@ -3845,7 +3871,7 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 	planetary_ring_basis(&p->tsd.planet.initial_orientation, &u_axis, &v_axis, &normal);
 	vec3_sub(&rel, cam_pos, &planet_pos);
 	cam_dz = vec3_dot(&rel, &normal);
-	if (fabsf(cam_dz) > PLANETARY_RING_BUBBLE_RADIUS +
+	if (fabsf(cam_dz) > draw_dist +
 			PLANETARY_RING_HALF_THICKNESS + PLANETARY_RING_MAX_ROCK_RADIUS)
 		return;
 
@@ -3854,14 +3880,14 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 	cam_r = hypotf(cam_ux, cam_vy);
 	inner_r = ring_data.inner_radius * p->tsd.planet.radius;
 	outer_r = ring_data.outer_radius * p->tsd.planet.radius;
-	reach = PLANETARY_RING_BUBBLE_RADIUS + PLANETARY_RING_MAX_ROCK_RADIUS;
+	reach = draw_dist + PLANETARY_RING_MAX_ROCK_RADIUS;
 	if (cam_r < inner_r - reach || cam_r > outer_r + reach)
 		return;
 
 	dz_eff = fmaxf(0.0f, fabsf(cam_dz) -
 		(PLANETARY_RING_HALF_THICKNESS + PLANETARY_RING_MAX_ROCK_RADIUS));
 	r_plane_max = sqrtf(fmaxf(0.0f,
-			PLANETARY_RING_BUBBLE_RADIUS * PLANETARY_RING_BUBBLE_RADIUS -
+			draw_dist * draw_dist -
 			dz_eff * dz_eff)) + PLANETARY_RING_MAX_ROCK_RADIUS;
 	max_ring = (int) ceilf(r_plane_max / PLANETARY_RING_CELL_SIZE) + 1;
 	cam_ix = (int) floorf(cam_ux / PLANETARY_RING_CELL_SIZE);
@@ -3872,7 +3898,7 @@ static void add_planet_ring_rocks(struct entity_context *cx,
 				time_sec, cam_ix, cam_iy);
 
 	for (ring_step = 1; ring_step <= max_ring &&
-			nplanetary_ring_rock_entities < MAX_PLANETARY_RING_ROCK_ENTITIES;
+			nplanetary_ring_rock_entities < cap;
 			ring_step++) {
 		for (di = -ring_step; di <= ring_step; di++) {
 			emit_planetary_ring_cell(cx, p, &planet_pos, &ring_data,
@@ -3938,7 +3964,7 @@ static void add_planetary_ring_rock_entities(struct entity_context *cx)
 			continue;
 		add_planet_ring_rocks(cx, &go[i], &cam_pos, &cam_fwd,
 				cos_half_cone, time_sec);
-		if (nplanetary_ring_rock_entities >= MAX_PLANETARY_RING_ROCK_ENTITIES)
+		if (nplanetary_ring_rock_entities >= planetary_ring_rock_cap())
 			break;
 	}
 }
@@ -21045,6 +21071,12 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&planetary_ring_asteroids, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
 	{ "PLANETARY_RING_ASTEROID_SCALE", "SIZE MULTIPLIER FOR 3D ASTEROIDS IN PLANETARY RINGS",
 		&planetary_ring_asteroid_scale, 'f', 0.1, 5.0, 1.0, 0, 0, 0, 0, },
+	{ "PLANETARY_RING_ASTEROID_DRAW_DIST", "MAX DRAW DISTANCE FOR 3D ASTEROIDS IN PLANETARY RINGS",
+		&planetary_ring_draw_dist, 'f', 1000.0, 15000.0, PLANETARY_RING_BUBBLE_RADIUS, 0, 0, 0, 0, },
+	{ "PLANETARY_RING_ASTEROID_FADE_DIST", "DISTANCE AT WHICH 3D RING ASTEROIDS BEGIN FADING OUT",
+		&planetary_ring_fade_dist, 'f', 200.0, 14000.0, PLANETARY_RING_FADE_RADIUS, 0, 0, 0, 0, },
+	{ "PLANETARY_RING_MAX_ASTEROIDS", "MAX NUMBER OF 3D RING ASTEROIDS DRAWN PER FRAME",
+		&planetary_ring_max_asteroids, 'i', 50.0, 2048.0, 700.0, 50, 2048, 700, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
