@@ -3931,8 +3931,20 @@ static void add_planetary_ring_rock_entities(struct entity_context *cx)
 	union vec3 cam_pos, cam_fwd;
 	double time_sec;
 
-	if (!planetary_ring_asteroids)
+	if (!planetary_ring_asteroids) {
+		graph_dev_set_planetary_ring_fade(0.0f, -1.0f);
 		return;
+	} else {
+		float draw_dist = fmaxf(100.0f, planetary_ring_draw_dist);
+		float fade_dist = fmaxf(0.0f, planetary_ring_fade_dist);
+		float fade_near, fade_far;
+
+		if (fade_dist >= draw_dist - 10.0f)
+			fade_dist = draw_dist * 0.7f;
+		fade_near = fmaxf(400.0f, fade_dist * 0.6f);
+		fade_far = fmaxf(fade_near + 400.0f, draw_dist * 0.85f);
+		graph_dev_set_planetary_ring_fade(fade_near, fade_far);
+	}
 
 	nplanetary_ring_rock_entities = 0;
 

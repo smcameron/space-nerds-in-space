@@ -85,6 +85,8 @@
 	uniform vec4 u_Sphere; /* eye space occluding sphere, x,y,z = center, w = radius^2 */
 	uniform float u_ring_inner_radius;
 	uniform float u_ring_outer_radius;
+	uniform float u_ring_fade_near;
+	uniform float u_ring_fade_far;
 
 	float map(in float x, float min1, float max1, float min2, float max2)
 	{
@@ -153,9 +155,11 @@
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= v_TintColor.rgb;
 		gl_FragColor *= v_TintColor.a;
-		float frag_dist = length(v_Position);
-		float near_fade = smoothstep(250.0, 2200.0, frag_dist);
-		gl_FragColor *= near_fade;
+		if (u_ring_fade_far > u_ring_fade_near) {
+			float frag_dist = length(v_Position);
+			float near_fade = smoothstep(u_ring_fade_near, u_ring_fade_far, frag_dist);
+			gl_FragColor *= near_fade;
+		}
 		gl_FragColor = filmic_tonemap(gl_FragColor);
 	}
 #endif

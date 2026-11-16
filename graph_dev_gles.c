@@ -73,6 +73,8 @@ static int draw_atmospheres = 1;
 
 static int filmic_tonemapping = 1;
 static float tonemapping_gain = 1.18;
+static float planetary_ring_fade_near = 1200.0f;
+static float planetary_ring_fade_far = 4675.0f;
 int graph_dev_planet_specularity = 1;
 int graph_dev_atmosphere_ring_shadows = 1;
 int graph_dev_shadow_map_enabled = 0; /* Shadow maps are not supported on the GLES backend. */
@@ -190,6 +192,8 @@ struct graph_dev_gl_textured_shader {
 	GLint ring_texture_v_id;
 	GLint ring_inner_radius_id;
 	GLint ring_outer_radius_id;
+	GLint ring_fade_near_id;
+	GLint ring_fade_far_id;
 	GLint invert; /* used by alpha_by_normal shader */
 	GLint in_shade;
 	GLint water_color; /* Used for specular calculations by planet shader */
@@ -768,6 +772,10 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glUniform1f(shader->ring_inner_radius_id, p->ring_inner_radius);
 	if (shader->ring_outer_radius_id >= 0)
 		glUniform1f(shader->ring_outer_radius_id, p->ring_outer_radius);
+	if (shader->ring_fade_near_id >= 0)
+		glUniform1f(shader->ring_fade_near_id, planetary_ring_fade_near);
+	if (shader->ring_fade_far_id >= 0)
+		glUniform1f(shader->ring_fade_far_id, planetary_ring_fade_far);
 	if (shader->invert >= 0)
 		glUniform1f(shader->invert, p->invert);
 	if (shader->in_shade >= 0)
@@ -3300,6 +3308,12 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->ring_outer_radius_id = glGetUniformLocation(shader->program_id, "u_ring_outer_radius");
 	if (shader->ring_outer_radius_id >= 0)
 		glUniform1f(shader->ring_outer_radius_id, 2.0);
+	shader->ring_fade_near_id = glGetUniformLocation(shader->program_id, "u_ring_fade_near");
+	if (shader->ring_fade_near_id >= 0)
+		glUniform1f(shader->ring_fade_near_id, planetary_ring_fade_near);
+	shader->ring_fade_far_id = glGetUniformLocation(shader->program_id, "u_ring_fade_far");
+	if (shader->ring_fade_far_id >= 0)
+		glUniform1f(shader->ring_fade_far_id, planetary_ring_fade_far);
 	shader->specular_power_id = glGetUniformLocation(shader->program_id, "u_SpecularPower");
 	if (shader->specular_power_id >= 0)
 		glUniform1f(shader->specular_power_id, 512.0);
@@ -4209,6 +4223,12 @@ void graph_dev_set_tonemapping_gain(float tmg)
 {
 	if (tmg >= MIN_TONEMAPPING_GAIN && tmg <= MAX_TONEMAPPING_GAIN)
 		tonemapping_gain = tmg;
+}
+
+void graph_dev_set_planetary_ring_fade(float near_dist, float far_dist)
+{
+	planetary_ring_fade_near = near_dist;
+	planetary_ring_fade_far = far_dist;
 }
 
 
