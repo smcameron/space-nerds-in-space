@@ -351,6 +351,8 @@ PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 
 SDLLIBS:=$(shell $(SDL2_CONFIG) --libs)
 SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
+NCURSESCFLAGS:=$(shell $(PKG_CONFIG) --cflags ncurses)
+NCURSESLIBS:=$(shell $(PKG_CONFIG) --libs ncurses)
 
 GLADLIBS=
 COMMON_GRAPH_OBJS=graph_dev_texture_cache.o graph_dev_mesh_cache.o graph_dev_context.o graph_dev_shader_setup.o star_light.o
@@ -1173,11 +1175,13 @@ bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${O
 	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -o bin/snis_arduino \
 			${OD}/snis-device-io.o ${OD}/string-utils.o ${OD}/stacktrace.o snis_arduino.c
 
-${OD}/snis-console.o:	snis-console.c string-utils.h
-	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -c -o ${OD}/snis-console.o snis-console.c
+${OD}/snis-console.o:	snis-console.c string-utils.h ${ODT}
+	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread ${NCURSESCFLAGS} \
+		-c -o ${OD}/snis-console.o snis-console.c
 
 bin/snis-console:	${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
-	$(CC) -pthread -o bin/snis-console ${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o -lncurses
+	$(CC) -pthread  ${NCURSESCFLAGS} -o bin/snis-console ${OD}/snis-console.o ${OD}/string-utils.o \
+		${OD}/stacktrace.o ${NCURSESLIBS}
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.h
 
