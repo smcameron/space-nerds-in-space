@@ -27634,9 +27634,6 @@ static void init_meshes(void)
 	update_splash_progress(80);
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
-		float minx, miny, minz, maxx, maxy, maxz;
-		float hx, hy, hz, maxh, sx, sy, sz;
-		int j;
 
 		if (i == 0)
 			snprintf(filename, sizeof(filename), "asteroid.stl");
@@ -27651,43 +27648,12 @@ static void init_meshes(void)
 		/* snis_server.c:player_collision_detection() */
 		/* printf("asteroid[%d] radius is %f\n", i, asteroid_mesh[i]->radius); */
 
-		asteroid_lp_mesh[i] = mesh_unit_spherified_cube(4);
-		if (asteroid_lp_mesh[i] && asteroid_mesh[i]) {
-			mesh_aabb(asteroid_mesh[i], &minx, &miny, &minz,
-				&maxx, &maxy, &maxz);
-			hx = 0.5f * (maxx - minx);
-			hy = 0.5f * (maxy - miny);
-			hz = 0.5f * (maxz - minz);
-			maxh = fmaxf(hx, fmaxf(hy, hz));
-			if (maxh > 0.0f) {
-				sx = fmaxf(0.25f, hx / maxh);
-				sy = fmaxf(0.25f, hy / maxh);
-				sz = fmaxf(0.25f, hz / maxh);
-			} else {
-				sx = 1.0f;
-				sy = 0.9f;
-				sz = 0.8f;
-			}
-			/* Ensure non-uniform vertex radii before mesh_distort() so
-			 * fmap(r, minr, maxr, ...) never sees minr == maxr.
-			 */
-			if (fabsf(sx - sy) < 0.02f && fabsf(sy - sz) < 0.02f) {
-				sx *= 1.08f;
-				sz *= 0.92f;
-			}
-			for (j = 0; j < asteroid_lp_mesh[i]->nvertices; j++) {
-				asteroid_lp_mesh[i]->v[j].x *= sx;
-				asteroid_lp_mesh[i]->v[j].y *= sy;
-				asteroid_lp_mesh[i]->v[j].z *= sz;
-			}
-			asteroid_lp_mesh[i]->radius = mesh_compute_radius(asteroid_lp_mesh[i]);
-			mesh_distort(asteroid_lp_mesh[i], 0.25f, osn);
-			asteroid_lp_mesh[i]->radius = mesh_compute_radius(asteroid_lp_mesh[i]);
-			if (asteroid_lp_mesh[i]->radius > 0.0f)
-				mesh_scale(asteroid_lp_mesh[i],
-					asteroid_mesh[i]->radius / asteroid_lp_mesh[i]->radius);
-			mesh_set_average_vertex_normals(asteroid_lp_mesh[i]);
-			mesh_graph_dev_init(asteroid_lp_mesh[i]);
+		if (asteroid_mesh[i]) {
+			int target_tris = asteroid_mesh[i]->ntriangles / 4;
+
+			if (target_tris < 64)
+				target_tris = 64;
+			asteroid_lp_mesh[i] = mesh_simplify(asteroid_mesh[i], target_tris);
 		}
 	}
 
