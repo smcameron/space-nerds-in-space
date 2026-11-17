@@ -2972,3 +2972,521 @@ char *mesh_name(struct mesh *m)
 	return m->name;
 }
 
+/*
+ * Quadric Error Metrics (Garland & Heckbert) edge-collapse mesh simplification.
+ * Symmetric 4x4 matrix stored in 10 doubles:
+ *   q[0..3] = q00, q01, q02, q03
+ *   q[4..6] = q11, q12, q13
+ *   q[7..8] = q22, q23
+ *   q[9]    = q33
+ */
+struct qem_quadric {
+	double q[10];
+};
+
+struct qem_edge_node {
+	int u, v;
+	int epoch_u, epoch_v;
+	double cost;
+	double x, y, z;
+};
+
+struct qem_heap {
+	struct qem_edge_node *data;
+	int size;
+	int cap;
+};
+
+struct qem_vtris {
+	int *t;
+	int count;
+	int cap;
+};
+
+struct qem_edge_pair {
+	int a, b;
+};
+
+static void qem_add_plane(struct qem_quadric *dst, double a, double b,
+				double c, double d)
+{
+	dst->q[0] += a * a;
+	dst->q[1] += a * b;
+	dst->q[2] += a * c;
+	dst->q[3] += a * d;
+	dst->q[4] += b * b;
+	dst->q[5] += b * c;
+	dst->q[6] += b * d;
+	dst->q[7] += c * c;
+	dst->q[8] += c * d;
+	dst->q[9] += d * d;
+}
+
+static void qem_add_quadric(struct qem_quadric *dst,
+				const struct qem_quadric *src)
+{
+	int i;
+
+	for (i = 0; i < 10; i++)
+		dst->q[i] += src->q[i];
+}
+
+static double qem_eval(const struct qem_quadric *q, double x, double y,
+			double z)
+{
+	double err = q->q[0] * x * x + 2.0 * q->q[1] * x * y +
+		2.0 * q->q[2] * x * z + 2.0 * q->q[3] * x +
+		q->q[4] * y * y + 2.0 * q->q[5] * y * z +
+		2.0 * q->q[6] * y + q->q[7] * z * z +
+		2.0 * q->q[8] * z + q->q[9];
+
+	return err < 0.0 ? 0.0 : err;
+}
+
+static double qem_optimal_point(const struct qem_quadric *q,
+				const struct vertex *v0,
+				const struct vertex *v1,
+				double *ox, double *oy, double *oz)
+{
+	double a00 = q->q[0], a01 = q->q[1], a02 = q->q[2];
+	double a11 = q->q[4], a12 = q->q[5], a22 = q->q[7];
+	double b0 = -q->q[3], b1 = -q->q[6], b2 = -q->q[8];
+	double c00 = a11 * a22 - a12 * a12;
+	double c01 = a02 * a12 - a01 * a22;
+	double c02 = a01 * a12 - a02 * a11;
+	double det = a00 * c00 + a01 * c01 + a02 * c02;
+	double mx, my, mz, err_u, err_v, err_m;
+
+	if (fabs(det) > 1e-12) {
+		double inv = 1.0 / det;
+		double c11 = a00 * a22 - a02 * a02;
+		double c12 = a01 * a02 - a00 * a12;
+		double c22 = a00 * a11 - a01 * a01;
+
+		*ox = (c00 * b0 + c01 * b1 + c02 * b2) * inv;
+		*oy = (c01 * b0 + c11 * b1 + c12 * b2) * inv;
+		*oz = (c02 * b0 + c12 * b1 + c22 * b2) * inv;
+		return qem_eval(q, *ox, *oy, *oz);
+	}
+
+	mx = 0.5 * ((double) v0->x + (double) v1->x);
+	my = 0.5 * ((double) v0->y + (double) v1->y);
+	mz = 0.5 * ((double) v0->z + (double) v1->z);
+	err_u = qem_eval(q, v0->x, v0->y, v0->z);
+	err_v = qem_eval(q, v1->x, v1->y, v1->z);
+	err_m = qem_eval(q, mx, my, mz);
+
+	if (err_m <= err_u && err_m <= err_v) {
+		*ox = mx;
+		*oy = my;
+		*oz = mz;
+		return err_m;
+	}
+	if (err_u <= err_v) {
+		*ox = v0->x;
+		*oy = v0->y;
+		*oz = v0->z;
+		return err_u;
+	}
+	*ox = v1->x;
+	*oy = v1->y;
+	*oz = v1->z;
+	return err_v;
+}
+
+static int qem_heap_push(struct qem_heap *h, const struct qem_edge_node *node)
+{
+	int idx;
+
+	if (h->size >= h->cap) {
+		int new_cap = h->cap ? h->cap * 2 : 256;
+		struct qem_edge_node *tmp = realloc(h->data,
+					sizeof(*h->data) * new_cap);
+		if (!tmp)
+			return -1;
+		h->data = tmp;
+		h->cap = new_cap;
+	}
+	idx = h->size++;
+	while (idx > 0) {
+		int parent = (idx - 1) / 2;
+
+		if (h->data[parent].cost <= node->cost)
+			break;
+		h->data[idx] = h->data[parent];
+		idx = parent;
+	}
+	h->data[idx] = *node;
+	return 0;
+}
+
+static int qem_heap_pop(struct qem_heap *h, struct qem_edge_node *out)
+{
+	struct qem_edge_node last;
+	int idx = 0;
+
+	if (h->size <= 0)
+		return 0;
+	*out = h->data[0];
+	last = h->data[--h->size];
+	if (h->size > 0) {
+		while (1) {
+			int left = 2 * idx + 1;
+			int right = left + 1;
+			int smallest = idx;
+
+			if (left < h->size && h->data[left].cost < last.cost)
+				smallest = left;
+			if (right < h->size &&
+			    h->data[right].cost <
+			    (smallest == idx ? last.cost : h->data[smallest].cost))
+				smallest = right;
+			if (smallest == idx)
+				break;
+			h->data[idx] = h->data[smallest];
+			idx = smallest;
+		}
+		h->data[idx] = last;
+	}
+	return 1;
+}
+
+static int qem_vtris_add(struct qem_vtris *vt, int tri_idx)
+{
+	int i;
+
+	for (i = 0; i < vt->count; i++) {
+		if (vt->t[i] == tri_idx)
+			return 0;
+	}
+	if (vt->count >= vt->cap) {
+		int new_cap = vt->cap ? vt->cap * 2 : 8;
+		int *tmp = realloc(vt->t, sizeof(*vt->t) * new_cap);
+
+		if (!tmp)
+			return -1;
+		vt->t = tmp;
+		vt->cap = new_cap;
+	}
+	vt->t[vt->count++] = tri_idx;
+	return 0;
+}
+
+static int qem_edge_pair_cmp(const void *pa, const void *pb)
+{
+	const struct qem_edge_pair *ea = pa;
+	const struct qem_edge_pair *eb = pb;
+
+	if (ea->a != eb->a)
+		return ea->a < eb->a ? -1 : 1;
+	if (ea->b != eb->b)
+		return ea->b < eb->b ? -1 : 1;
+	return 0;
+}
+
+static void qem_tri_normal(const double *p0, const double *p1,
+				const double *p2, double *n)
+{
+	double ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2];
+	double vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
+
+	n[0] = uy * vz - uz * vy;
+	n[1] = uz * vx - ux * vz;
+	n[2] = ux * vy - uy * vx;
+}
+
+static int qem_check_tris_no_flip(const struct qem_vtris *vt,
+					const unsigned char *t_deleted,
+					const int *tv, const struct vertex *wv,
+					int moved_v, int other_v,
+					double nx, double ny, double nz)
+{
+	int i;
+
+	for (i = 0; i < vt->count; i++) {
+		int ti = vt->t[i];
+		int a, b, c;
+		double p[3][3], np[3][3], on[3], nn[3], dot, nlen2;
+		int k;
+
+		if (t_deleted[ti])
+			continue;
+		a = tv[ti * 3 + 0];
+		b = tv[ti * 3 + 1];
+		c = tv[ti * 3 + 2];
+		if (a == other_v || b == other_v || c == other_v)
+			continue;
+
+		for (k = 0; k < 3; k++) {
+			int vi = tv[ti * 3 + k];
+
+			p[k][0] = wv[vi].x;
+			p[k][1] = wv[vi].y;
+			p[k][2] = wv[vi].z;
+			if (vi == moved_v) {
+				np[k][0] = nx;
+				np[k][1] = ny;
+				np[k][2] = nz;
+			} else {
+				np[k][0] = p[k][0];
+				np[k][1] = p[k][1];
+				np[k][2] = p[k][2];
+			}
+		}
+		qem_tri_normal(p[0], p[1], p[2], on);
+		qem_tri_normal(np[0], np[1], np[2], nn);
+		nlen2 = nn[0] * nn[0] + nn[1] * nn[1] + nn[2] * nn[2];
+		if (nlen2 < 1e-24)
+			return 0;
+		dot = on[0] * nn[0] + on[1] * nn[1] + on[2] * nn[2];
+		if (dot <= 0.0)
+			return 0;
+	}
+	return 1;
+}
+
+static int qem_push_edge(struct qem_heap *heap, const struct qem_quadric *quads,
+				const struct vertex *wv, const int *v_epoch,
+				int u, int v)
+{
+	struct qem_quadric sum = quads[u];
+	struct qem_edge_node node;
+
+	qem_add_quadric(&sum, &quads[v]);
+	node.u = u;
+	node.v = v;
+	node.epoch_u = v_epoch[u];
+	node.epoch_v = v_epoch[v];
+	node.cost = qem_optimal_point(&sum, &wv[u], &wv[v],
+					&node.x, &node.y, &node.z);
+	return qem_heap_push(heap, &node);
+}
+
+/*
+ * Simplify a triangle mesh to approximately target_triangles using Quadric
+ * Error Metrics (QEM) edge-collapse decimation.  Returns a new mesh; the
+ * caller is responsible for freeing it with mesh_free().  Texture coordinates
+ * are not preserved.
+ */
+struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
+{
+	struct vertex *wv = NULL;
+	struct qem_quadric *quads = NULL;
+	struct qem_vtris *vtris = NULL;
+	struct qem_edge_pair *edges = NULL;
+	struct qem_heap heap = { NULL, 0, 0 };
+	unsigned char *v_deleted = NULL;
+	unsigned char *t_deleted = NULL;
+	int *v_epoch = NULL;
+	int *tv = NULL;
+	int *v_remap = NULL;
+	struct mesh *out = NULL;
+	int nv, nt, active_tris, nedges = 0;
+	int i, k, out_nv = 0, out_nt = 0;
+
+	if (!m || m->geometry_mode != MESH_GEOMETRY_TRIANGLES ||
+	    m->ntriangles <= 0 || m->nvertices <= 0)
+		return NULL;
+
+	if (target_triangles < 4)
+		target_triangles = 4;
+	if (m->ntriangles <= target_triangles)
+		return mesh_duplicate(m);
+
+	nv = m->nvertices;
+	nt = m->ntriangles;
+	active_tris = nt;
+
+	wv = malloc(sizeof(*wv) * nv);
+	quads = calloc(nv, sizeof(*quads));
+	vtris = calloc(nv, sizeof(*vtris));
+	v_deleted = calloc(nv, sizeof(*v_deleted));
+	t_deleted = calloc(nt, sizeof(*t_deleted));
+	v_epoch = calloc(nv, sizeof(*v_epoch));
+	tv = malloc(sizeof(*tv) * nt * 3);
+	edges = malloc(sizeof(*edges) * nt * 3);
+	v_remap = malloc(sizeof(*v_remap) * nv);
+	if (!wv || !quads || !vtris || !v_deleted || !t_deleted ||
+	    !v_epoch || !tv || !edges || !v_remap)
+		goto cleanup;
+
+	memcpy(wv, m->v, sizeof(*wv) * nv);
+
+	for (i = 0; i < nt; i++) {
+		double p[3][3], n[3], len, d;
+		int idx[3];
+
+		for (k = 0; k < 3; k++) {
+			ptrdiff_t off = m->t[i].v[k] - m->v;
+
+			if (off < 0 || off >= nv)
+				goto cleanup;
+			idx[k] = (int) off;
+			tv[i * 3 + k] = idx[k];
+			p[k][0] = wv[idx[k]].x;
+			p[k][1] = wv[idx[k]].y;
+			p[k][2] = wv[idx[k]].z;
+			if (qem_vtris_add(&vtris[idx[k]], i) < 0)
+				goto cleanup;
+		}
+		qem_tri_normal(p[0], p[1], p[2], n);
+		len = sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+		if (len > 1e-12) {
+			n[0] /= len;
+			n[1] /= len;
+			n[2] /= len;
+			d = -(n[0] * p[0][0] + n[1] * p[0][1] + n[2] * p[0][2]);
+			for (k = 0; k < 3; k++)
+				qem_add_plane(&quads[idx[k]],
+						n[0], n[1], n[2], d);
+		}
+		for (k = 0; k < 3; k++) {
+			int a = idx[k];
+			int b = idx[(k + 1) % 3];
+
+			if (a != b) {
+				edges[nedges].a = a < b ? a : b;
+				edges[nedges].b = a < b ? b : a;
+				nedges++;
+			}
+		}
+	}
+
+	qsort(edges, nedges, sizeof(*edges), qem_edge_pair_cmp);
+	for (i = 0; i < nedges; i++) {
+		if (i > 0 && edges[i].a == edges[i - 1].a &&
+		    edges[i].b == edges[i - 1].b)
+			continue;
+		if (qem_push_edge(&heap, quads, wv, v_epoch,
+				edges[i].a, edges[i].b) < 0)
+			goto cleanup;
+	}
+
+	while (active_tris > target_triangles) {
+		struct qem_edge_node node;
+		int u, v;
+
+		if (!qem_heap_pop(&heap, &node))
+			break;
+		u = node.u;
+		v = node.v;
+		if (v_deleted[u] || v_deleted[v])
+			continue;
+		if (node.epoch_u != v_epoch[u] || node.epoch_v != v_epoch[v])
+			continue;
+		if (!qem_check_tris_no_flip(&vtris[u], t_deleted, tv, wv,
+					u, v, node.x, node.y, node.z))
+			continue;
+		if (!qem_check_tris_no_flip(&vtris[v], t_deleted, tv, wv,
+					v, u, node.x, node.y, node.z))
+			continue;
+
+		wv[u].x = (float) node.x;
+		wv[u].y = (float) node.y;
+		wv[u].z = (float) node.z;
+		qem_add_quadric(&quads[u], &quads[v]);
+		v_deleted[v] = 1;
+		v_epoch[u]++;
+
+		for (i = 0; i < vtris[v].count; i++) {
+			int ti = vtris[v].t[i];
+			int has_u = 0;
+
+			if (t_deleted[ti])
+				continue;
+			for (k = 0; k < 3; k++) {
+				if (tv[ti * 3 + k] == u)
+					has_u = 1;
+			}
+			if (has_u) {
+				t_deleted[ti] = 1;
+				active_tris--;
+			} else {
+				for (k = 0; k < 3; k++) {
+					if (tv[ti * 3 + k] == v)
+						tv[ti * 3 + k] = u;
+				}
+				if (qem_vtris_add(&vtris[u], ti) < 0)
+					goto cleanup;
+			}
+		}
+
+		for (i = 0; i < vtris[u].count; i++) {
+			int ti = vtris[u].t[i];
+
+			if (t_deleted[ti])
+				continue;
+			for (k = 0; k < 3; k++) {
+				int w = tv[ti * 3 + k];
+
+				if (w != u && !v_deleted[w]) {
+					if (qem_push_edge(&heap, quads, wv,
+							v_epoch, u, w) < 0)
+						goto cleanup;
+				}
+			}
+		}
+	}
+
+	for (i = 0; i < nv; i++) {
+		if (!v_deleted[i])
+			v_remap[i] = out_nv++;
+		else
+			v_remap[i] = -1;
+	}
+	for (i = 0; i < nt; i++) {
+		if (!t_deleted[i])
+			out_nt++;
+	}
+	if (out_nv <= 0 || out_nt <= 0)
+		goto cleanup;
+
+	out = allocate_mesh_for_copy(out_nt, out_nv, 0, 0);
+	if (!out)
+		goto cleanup;
+	out->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	out->ntriangles = out_nt;
+	out->nvertices = out_nv;
+
+	for (i = 0; i < nv; i++) {
+		if (!v_deleted[i])
+			out->v[v_remap[i]] = wv[i];
+	}
+	k = 0;
+	for (i = 0; i < nt; i++) {
+		if (t_deleted[i])
+			continue;
+		out->t[k].v[0] = &out->v[v_remap[tv[i * 3 + 0]]];
+		out->t[k].v[1] = &out->v[v_remap[tv[i * 3 + 1]]];
+		out->t[k].v[2] = &out->v[v_remap[tv[i * 3 + 2]]];
+		k++;
+	}
+
+	if (m->material) {
+		out->material = malloc(sizeof(*out->material));
+		if (out->material)
+			*out->material = *m->material;
+	}
+	snprintf(out->name, sizeof(out->name), "%s (simplified)", m->name);
+	mesh_set_average_vertex_normals(out);
+	out->radius = mesh_compute_radius(out);
+	mesh_graph_dev_init(out);
+
+cleanup:
+	free(wv);
+	free(quads);
+	if (vtris) {
+		for (i = 0; i < nv; i++)
+			free(vtris[i].t);
+		free(vtris);
+	}
+	free(v_deleted);
+	free(t_deleted);
+	free(v_epoch);
+	free(tv);
+	free(edges);
+	free(v_remap);
+	free(heap.data);
+	return out;
+}
+

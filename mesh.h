@@ -132,6 +132,7 @@ GLOBAL void mesh_aabb(struct mesh *m, float *minx, float *miny, float *minz, flo
 
 GLOBAL void mesh_set_name(struct mesh *m, char *name);
 GLOBAL char *mesh_name(struct mesh *m);
+GLOBAL struct mesh *mesh_simplify(struct mesh *m, int target_triangles);
 
 #undef GLOBAL
 #endif
