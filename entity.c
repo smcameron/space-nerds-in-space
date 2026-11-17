@@ -1549,7 +1549,10 @@ void render_entities(struct entity_context *cx)
 				continue;
 
 			/* Choose low or high poly mesh based on on-screen size */
-			if (approx_pixel_size < cx->hi_lo_poly_pixel_threshold)
+			float lp_threshold = e->low_poly->low_poly_pixel_threshold > 0.0f ?
+				e->low_poly->low_poly_pixel_threshold :
+				cx->hi_lo_poly_pixel_threshold;
+			if (approx_pixel_size < lp_threshold)
 				e->m = e->low_poly;
 			else
 				e->m = e->high_poly;

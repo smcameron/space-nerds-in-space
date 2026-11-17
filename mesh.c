@@ -310,6 +310,7 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
 	}
 	copy->radius = original->radius;
+	copy->low_poly_pixel_threshold = original->low_poly_pixel_threshold;
 	if (original->material) {
 		copy->material = malloc(sizeof(*copy->material));
 		*copy->material = *original->material;
@@ -2970,6 +2971,20 @@ char *mesh_name(struct mesh *m)
 	if (!m)
 		return "NULL mesh ptr";
 	return m->name;
+}
+
+void mesh_set_low_poly_pixel_threshold(struct mesh *m, float pixel_threshold)
+{
+	if (!m)
+		return;
+	m->low_poly_pixel_threshold = pixel_threshold;
+}
+
+float mesh_get_low_poly_pixel_threshold(const struct mesh *m)
+{
+	if (!m)
+		return 0.0f;
+	return m->low_poly_pixel_threshold;
 }
 
 /*

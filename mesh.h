@@ -65,6 +65,7 @@ struct mesh {
 	struct material *material; /* for now just one material */
 	void *graph_ptr;
 	float radius;
+	float low_poly_pixel_threshold; /* <= 0 means use entity_context default */
 	char name[256]; /* For debugging, if there are problems, we can tell what sort of mesh. */
 };
 
@@ -132,6 +133,8 @@ GLOBAL void mesh_aabb(struct mesh *m, float *minx, float *miny, float *minz, flo
 
 GLOBAL void mesh_set_name(struct mesh *m, char *name);
 GLOBAL char *mesh_name(struct mesh *m);
+GLOBAL void mesh_set_low_poly_pixel_threshold(struct mesh *m, float pixel_threshold);
+GLOBAL float mesh_get_low_poly_pixel_threshold(const struct mesh *m);
 GLOBAL struct mesh *mesh_simplify(struct mesh *m, int target_triangles);
 
 #undef GLOBAL

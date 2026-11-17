@@ -27654,6 +27654,7 @@ static void init_meshes(void)
 			if (target_tris < 64)
 				target_tris = 64;
 			asteroid_lp_mesh[i] = mesh_simplify(asteroid_mesh[i], target_tris);
+			mesh_set_low_poly_pixel_threshold(asteroid_lp_mesh[i], 50.0f);
 		}
 	}
 
