@@ -215,6 +215,11 @@ struct engineering_ui {
 	struct button *transporter_to_ship_button;
 	struct button *transporter_from_ship_button;
 	struct button *transporter_energize_button;
+	struct slider *transporter_freq_slider;
+	struct slider *transporter_phase_slider;
+	double transporter_freq;
+	double transporter_phase;
+	int transporter_lock_warning;
 	int transporter_direction;
 	int transporter_status;
 	int transporter_progress;

@@ -8091,6 +8091,8 @@ static void hide_or_unhide_transporter_widgets(int hide)
 	hide_or_unhide(eng_ui.transporter_to_ship_button);
 	hide_or_unhide(eng_ui.transporter_from_ship_button);
 	hide_or_unhide(eng_ui.transporter_energize_button);
+	hide_or_unhide(eng_ui.transporter_freq_slider);
+	hide_or_unhide(eng_ui.transporter_phase_slider);
 }
 
 /* Hide engineering widgets when switching to transporter screen */
@@ -16652,11 +16654,133 @@ static void transporter_from_ship_pressed(__attribute__((unused)) void *x)
 	eng_ui.transporter_direction = OPCODE_TRANSPORTER_DIR_FROM_SHIP;
 }
 
+#define TRANSPORTER_LOCK_THRESHOLD 80
+
+static double sample_transporter_freq(void)
+{
+	return eng_ui.transporter_freq;
+}
+
+static double sample_transporter_phase(void)
+{
+	return eng_ui.transporter_phase;
+}
+
+static void do_transporter_freq(struct slider *s)
+{
+	eng_ui.transporter_freq = snis_slider_get_input(s);
+}
+
+static void do_transporter_phase(struct slider *s)
+{
+	eng_ui.transporter_phase = snis_slider_get_input(s);
+}
+
+static float clampf_unit(float v, float lo, float hi)
+{
+	if (v < lo)
+		return lo;
+	if (v > hi)
+		return hi;
+	return v;
+}
+
+/*
+ * Compute target carrier waveform parameters from the entered transporter tag,
+ * science target (range & relative velocity), and transporter subsystem damage.
+ * Caller must hold universe_mutex.
+ */
+static void compute_transporter_signal(struct snis_entity *o, int *has_signal,
+				       float *target_freq, float *target_phase,
+				       float *amp, float *noise)
+{
+	char *buf;
+	uint32_t hash = 2166136261u;
+	int tag_len = 0;
+	int i;
+
+	*has_signal = 0;
+	*target_freq = 0.5f;
+	*target_phase = 0.5f;
+	*amp = 0.0f;
+	*noise = 0.0f;
+
+	buf = snis_text_input_box_get_buffer(eng_ui.transporter_tag_input);
+	if (buf) {
+		for (i = 0; i < TRANSPORTER_TAG_LEN && buf[i] != '\0'; i++) {
+			unsigned char c = (unsigned char) toupper((unsigned char) buf[i]);
+
+			if (c != ' ') {
+				hash = (hash ^ c) * 16777619u;
+				tag_len++;
+			}
+		}
+	}
+
+	if (tag_len > 0) {
+		*has_signal = 1;
+	} else if (eng_ui.transporter_direction == OPCODE_TRANSPORTER_DIR_FROM_SHIP &&
+		   curr_science_guy && curr_science_guy->alive) {
+		hash = (hash ^ curr_science_guy->id) * 16777619u;
+		*has_signal = 1;
+	} else {
+		*noise = 0.04f;
+		return;
+	}
+
+	*target_freq = 0.20f + (float) (hash & 0xffff) / 65535.0f * 0.60f;
+	*target_phase = 0.15f + (float) ((hash >> 16) & 0xffff) / 65535.0f * 0.70f;
+
+	if (curr_science_guy && curr_science_guy->alive) {
+		double dist = object_dist(o, curr_science_guy);
+		double dvx = o->vx - curr_science_guy->vx;
+		double dvy = o->vy - curr_science_guy->vy;
+		double dvz = o->vz - curr_science_guy->vz;
+		double rel_speed = sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
+		float range_ratio = (float) (dist / TRANSPORTER_RANGE);
+		float speed_factor = clampf_unit((float) (rel_speed / 200.0), 0.0f, 1.0f);
+		float t = (float) eng_ui.transporter_waveform_phase * 0.03f;
+
+		if (dist > TRANSPORTER_RANGE) {
+			*amp = 0.20f;
+			*noise = 0.25f;
+		} else {
+			*amp = 1.0f - 0.50f * clampf_unit(range_ratio, 0.0f, 1.0f);
+			*noise = 0.08f * clampf_unit(range_ratio, 0.0f, 1.0f);
+		}
+		*target_freq += sinf(t) * 0.06f * speed_factor;
+		*target_phase += cosf(t * 0.7f) * 0.06f * speed_factor;
+	} else {
+		*amp = 0.85f;
+		*noise = 0.03f;
+	}
+
+	*noise += 0.20f * ((float) o->tsd.ship.damage.transporter_damage / 255.0f);
+	*target_freq = clampf_unit(*target_freq, 0.05f, 0.95f);
+	*target_phase = clampf_unit(*target_phase, 0.05f, 0.95f);
+}
+
+static int compute_transporter_lock_pct(float target_freq, float target_phase)
+{
+	float df = fabsf((float) eng_ui.transporter_freq - target_freq);
+	float dp = fabsf((float) eng_ui.transporter_phase - target_phase);
+	float err = sqrtf(df * df + dp * dp);
+	int pct = (int) (100.0f * (1.0f - err / 0.22f));
+
+	if (pct < 0)
+		return 0;
+	if (pct > 100)
+		return 100;
+	return pct;
+}
+
 static void transporter_energize_pressed(__attribute__((unused)) void *x)
 {
 	struct snis_entity *o;
 	char *buf;
 	char tag[TRANSPORTER_TAG_LEN + 1];
+	int has_signal, lock_pct;
+	float target_freq, target_phase, amp, noise;
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
@@ -16665,7 +16789,18 @@ static void transporter_energize_pressed(__attribute__((unused)) void *x)
 		pthread_mutex_unlock(&universe_mutex);
 		return;
 	}
+	compute_transporter_signal(o, &has_signal, &target_freq,
+				   &target_phase, &amp, &noise);
+	lock_pct = has_signal ?
+		   compute_transporter_lock_pct(target_freq, target_phase) : 0;
 	pthread_mutex_unlock(&universe_mutex);
+
+	if (has_signal && lock_pct < TRANSPORTER_LOCK_THRESHOLD) {
+		eng_ui.transporter_lock_warning = 60;
+		wwviaudio_add_sound(UISND12);
+		return;
+	}
+	eng_ui.transporter_lock_warning = 0;
 
 	buf = snis_text_input_box_get_buffer(eng_ui.transporter_tag_input);
 	memset(tag, ' ', TRANSPORTER_TAG_LEN);
@@ -17089,6 +17224,9 @@ static void init_engineering_ui(void)
 	eu->transporter_status = TRANSPORTER_STATUS_IDLE;
 	eu->transporter_progress = 0;
 	eu->transporter_waveform_phase = 0;
+	eu->transporter_freq = 0.5;
+	eu->transporter_phase = 0.5;
+	eu->transporter_lock_warning = 0;
 	memset(eu->transporter_tag_buffer, 0, sizeof(eu->transporter_tag_buffer));
 
 	eu->transporter_tag_input = snis_text_input_box_init(txx(240), txy(120),
@@ -17125,6 +17263,24 @@ static void init_engineering_ui(void)
 	snis_button_set_sound(eu->transporter_energize_button, UISND1);
 	snis_button_set_hover_color(eu->transporter_energize_button, hover_color);
 
+	eu->transporter_freq_slider = snis_slider_init(txx(60), txy(332),
+						txx(220), txy(16),
+						UI_COLOR(eng_power_meter),
+						"FREQ", "LO", "HI", 0.0, 1.0,
+						sample_transporter_freq,
+						do_transporter_freq);
+	snis_slider_set_input(eu->transporter_freq_slider, eu->transporter_freq);
+	snis_slider_set_fuzz(eu->transporter_freq_slider, 0);
+
+	eu->transporter_phase_slider = snis_slider_init(txx(350), txy(332),
+						txx(220), txy(16),
+						UI_COLOR(eng_power_meter),
+						"PHASE", "-PI", "+PI", 0.0, 1.0,
+						sample_transporter_phase,
+						do_transporter_phase);
+	snis_slider_set_input(eu->transporter_phase_slider, eu->transporter_phase);
+	snis_slider_set_fuzz(eu->transporter_phase_slider, 0);
+
 	ui_add_text_input_box(eu->transporter_tag_input, dm);
 	ui_add_button(eu->transporter_to_ship_button, dm,
 		      "SELECT TRANSPORT DIRECTION: BEAM TARGET TO SHIP");
@@ -17132,6 +17288,10 @@ static void init_engineering_ui(void)
 		      "SELECT TRANSPORT DIRECTION: BEAM ABOARD PASSENGER OFF SHIP");
 	ui_add_button(eu->transporter_energize_button, dm,
 		      "ENERGIZE TRANSPORTER CONFINEMENT BEAM");
+	ui_add_slider(eu->transporter_freq_slider, dm,
+		      "ADJUST CONFINEMENT BEAM CARRIER FREQUENCY");
+	ui_add_slider(eu->transporter_phase_slider, dm,
+		      "ADJUST CONFINEMENT BEAM PHASE OFFSET");
 
 	hide_transporter_widgets();
 }
@@ -17225,15 +17385,27 @@ static int engineering_warnings_active(void)
 		snis_slider_alarm_triggered(eng_ui.lifesupport_damage);
 }
 
-static void draw_transporter_waveform(int x, int y, int w, int h)
+static void draw_transporter_waveform(int x, int y, int w, int h,
+				      struct snis_entity *o, int has_signal,
+				      float target_freq, float target_phase,
+				      float amp, float noise, int lock_pct)
 {
 	int mid_y = y + h / 2;
-	int px, prev_x = -1, prev_y = -1;
+	int px, prev_x, prev_y;
 	int active = (eng_ui.transporter_status ==
 		      TRANSPORTER_STATUS_IN_PROGRESS);
 	float phase_step = active ? 0.08f : 0.02f;
+	float anim_phase;
+	float target_cycles = 2.0f + target_freq * 10.0f;
+	float user_cycles = 2.0f + (float) eng_ui.transporter_freq * 10.0f;
+	float target_off = target_phase * 2.0f * (float) M_PI;
+	float user_off = (float) eng_ui.transporter_phase * 2.0f * (float) M_PI;
+	float beam_amp;
+	int pwr = o->tsd.ship.power_data.transporter.i;
+	int beam_color;
 
 	eng_ui.transporter_waveform_phase++;
+	anim_phase = (float) eng_ui.transporter_waveform_phase * phase_step;
 
 	/* Outer border */
 	sng_set_foreground(UI_COLOR(eng_power_meter));
@@ -17241,34 +17413,72 @@ static void draw_transporter_waveform(int x, int y, int w, int h)
 
 	/* Label */
 	sng_abs_xy_draw_string("TRANSPORTER BUFFER / CONFINEMENT BEAM",
-				PICO_FONT, x + txx(10), y + txy(18));
+				PICO_FONT, x + txx(10), y + txy(16));
 
-	/* Centerline grid */
+	/* Centerline and vertical grid ticks */
 	sng_set_foreground(UI_COLOR(slider_black));
 	snis_draw_line(x + 2, mid_y, x + w - 2, mid_y);
+	for (px = x + w / 4; px < x + w; px += w / 4)
+		snis_draw_line(px, y + txy(20), px, y + h - 4);
 
-	/* Draw waveform */
-	if (active)
-		sng_set_foreground(UI_COLOR(eng_selected_button));
-	else
-		sng_set_foreground(UI_COLOR(eng_button));
-
+	/* Draw target carrier waveform (or static flatline if no signal) */
+	prev_x = -1;
+	prev_y = -1;
+	sng_set_foreground(has_signal ? UI_COLOR(eng_caution_status) :
+					UI_COLOR(eng_button));
 	for (px = x + 4; px < x + w - 4; px += 2) {
-		float t = (float)(px - x) / (float)w;
-		float env = sin(t * M_PI);
-		float phase = (float)eng_ui.transporter_waveform_phase *
-			      phase_step;
+		float t = (float) (px - x) / (float) w;
+		float env = sinf(t * (float) M_PI);
+		uint32_t s = (uint32_t) (px * 73856093u ^
+					 eng_ui.transporter_waveform_phase * 19349663u);
+		float jitter = ((float) (s & 0xff) / 127.5f - 1.0f) * noise;
 		float val;
 		int py;
 
-		if (active) {
-			val = sin(t * 20.0 * M_PI + phase) * 0.6 +
-			      sin(t * 40.0 * M_PI - phase * 1.5) * 0.4;
-			py = mid_y - (int)(val * (h * 0.38) * env);
+		if (has_signal) {
+			val = sinf(t * target_cycles * (float) M_PI +
+				   target_off + anim_phase) * amp + jitter;
 		} else {
-			val = sin(t * 8.0 * M_PI + phase);
-			py = mid_y - (int)(val * (h * 0.10) * env);
+			val = jitter;
 		}
+		val = clampf_unit(val, -1.0f, 1.0f);
+		py = mid_y - (int) (val * (h * 0.34f) * env);
+
+		if (prev_x >= 0)
+			snis_draw_line(prev_x, prev_y, px, py);
+		prev_x = px;
+		prev_y = py;
+	}
+
+	/* Draw confinement beam waveform */
+	beam_amp = (pwr >= TRANSPORTER_POWER_THRESHOLD) ? 0.85f : 0.30f;
+	if (active) {
+		float pulse = 1.0f + 0.15f * sinf(anim_phase * 2.0f);
+		beam_amp = clampf_unit(beam_amp * pulse, 0.0f, 1.0f);
+		beam_color = UI_COLOR(eng_selected_button);
+	} else if (has_signal && lock_pct >= TRANSPORTER_LOCK_THRESHOLD) {
+		beam_color = UI_COLOR(eng_good_status);
+	} else {
+		beam_color = UI_COLOR(eng_power_meter);
+	}
+
+	prev_x = -1;
+	prev_y = -1;
+	sng_set_foreground(beam_color);
+	for (px = x + 4; px < x + w - 4; px += 2) {
+		float t = (float) (px - x) / (float) w;
+		float env = sinf(t * (float) M_PI);
+		float val = sinf(t * user_cycles * (float) M_PI +
+				 user_off + anim_phase) * beam_amp;
+		int py;
+
+		if (active) {
+			float prog = (float) eng_ui.transporter_progress / 100.0f;
+			val += sinf(t * user_cycles * 2.0f * (float) M_PI -
+				    anim_phase * 1.5f) * 0.15f * prog;
+		}
+		val = clampf_unit(val, -1.0f, 1.0f);
+		py = mid_y - (int) (val * (h * 0.34f) * env);
 
 		if (prev_x >= 0)
 			snis_draw_line(prev_x, prev_y, px, py);
@@ -17286,6 +17496,8 @@ static void show_transporter(void)
 	int status_color;
 	double dist;
 	int pwr, dmg, online;
+	int has_signal, lock_pct;
+	float target_freq, target_phase, amp, noise;
 
 	pthread_mutex_lock(&universe_mutex);
 	o = find_my_ship();
@@ -17299,52 +17511,78 @@ static void show_transporter(void)
 	sng_abs_xy_draw_string("TRANSPORTER TAG:", NANO_FONT,
 				txx(60), txy(138));
 
+	/* Compute signal & lock quality */
+	compute_transporter_signal(o, &has_signal, &target_freq,
+				   &target_phase, &amp, &noise);
+	lock_pct = has_signal ?
+		   compute_transporter_lock_pct(target_freq, target_phase) : 0;
+
 	/* Waveform display */
 	x = txx(60);
-	y = txy(205);
+	y = txy(198);
 	w = txx(680);
-	h = txy(140);
-	draw_transporter_waveform(x, y, w, h);
+	h = txy(118);
+	draw_transporter_waveform(x, y, w, h, o, has_signal, target_freq,
+				  target_phase, amp, noise, lock_pct);
+
+	/* Pattern lock readout next to FREQ / PHASE sliders */
+	if (!has_signal) {
+		snprintf(buf, sizeof(buf), "LOCK: --- [NO SIGNAL]");
+		sng_set_foreground(UI_COLOR(eng_caution_status));
+	} else if (lock_pct >= TRANSPORTER_LOCK_THRESHOLD) {
+		snprintf(buf, sizeof(buf), "LOCK: %3d%% [ACQUIRED]", lock_pct);
+		sng_set_foreground(UI_COLOR(eng_good_status));
+	} else {
+		snprintf(buf, sizeof(buf), "LOCK: %3d%% [ALIGN]", lock_pct);
+		sng_set_foreground(UI_COLOR(eng_caution_status));
+	}
+	sng_abs_xy_draw_string(buf, PICO_FONT, txx(590), txy(346));
 
 	/* Status display */
-	switch (eng_ui.transporter_status) {
-	case TRANSPORTER_STATUS_IDLE:
-		status_str = "IDLE";
-		status_color = UI_COLOR(eng_power_meter);
-		break;
-	case TRANSPORTER_STATUS_IN_PROGRESS:
-		status_str = "IN PROGRESS - ENERGIZING PATTERN";
-		status_color = UI_COLOR(eng_caution_status);
-		break;
-	case TRANSPORTER_STATUS_COMPLETE:
-		status_str = "TRANSPORT COMPLETE";
-		status_color = UI_COLOR(eng_good_status);
-		break;
-	case TRANSPORTER_STATUS_NO_POWER:
-		status_str = "ERROR: INSUFFICIENT TRANSPORTER POWER";
+	if (eng_ui.transporter_lock_warning > 0) {
+		eng_ui.transporter_lock_warning--;
+		status_str = "ERROR: PATTERN LOCK REQUIRED - ALIGN WAVEFORMS";
 		status_color = UI_COLOR(eng_warning_status);
-		break;
-	case TRANSPORTER_STATUS_OUT_OF_RANGE:
-		status_str = "ERROR: TARGET OUT OF RANGE";
-		status_color = UI_COLOR(eng_warning_status);
-		break;
-	case TRANSPORTER_STATUS_NO_CAPACITY:
-		status_str = "ERROR: INSUFFICIENT BERTH OR CARGO CAPACITY";
-		status_color = UI_COLOR(eng_warning_status);
-		break;
-	case TRANSPORTER_STATUS_TAG_NOT_FOUND:
-		status_str = "ERROR: TRANSPORTER TAG NOT FOUND";
-		status_color = UI_COLOR(eng_warning_status);
-		break;
-	case TRANSPORTER_STATUS_NO_TARGET:
-		status_str = "ERROR: NO VALID TARGET SELECTED BY SCIENCE";
-		status_color = UI_COLOR(eng_warning_status);
-		break;
-	case TRANSPORTER_STATUS_FAILED:
-	default:
-		status_str = "ERROR: TRANSPORT OPERATION FAILED";
-		status_color = UI_COLOR(eng_warning_status);
-		break;
+	} else {
+		switch (eng_ui.transporter_status) {
+		case TRANSPORTER_STATUS_IDLE:
+			status_str = "IDLE";
+			status_color = UI_COLOR(eng_power_meter);
+			break;
+		case TRANSPORTER_STATUS_IN_PROGRESS:
+			status_str = "IN PROGRESS - ENERGIZING PATTERN";
+			status_color = UI_COLOR(eng_caution_status);
+			break;
+		case TRANSPORTER_STATUS_COMPLETE:
+			status_str = "TRANSPORT COMPLETE";
+			status_color = UI_COLOR(eng_good_status);
+			break;
+		case TRANSPORTER_STATUS_NO_POWER:
+			status_str = "ERROR: INSUFFICIENT TRANSPORTER POWER";
+			status_color = UI_COLOR(eng_warning_status);
+			break;
+		case TRANSPORTER_STATUS_OUT_OF_RANGE:
+			status_str = "ERROR: TARGET OUT OF RANGE";
+			status_color = UI_COLOR(eng_warning_status);
+			break;
+		case TRANSPORTER_STATUS_NO_CAPACITY:
+			status_str = "ERROR: INSUFFICIENT BERTH OR CARGO CAPACITY";
+			status_color = UI_COLOR(eng_warning_status);
+			break;
+		case TRANSPORTER_STATUS_TAG_NOT_FOUND:
+			status_str = "ERROR: TRANSPORTER TAG NOT FOUND";
+			status_color = UI_COLOR(eng_warning_status);
+			break;
+		case TRANSPORTER_STATUS_NO_TARGET:
+			status_str = "ERROR: NO VALID TARGET SELECTED BY SCIENCE";
+			status_color = UI_COLOR(eng_warning_status);
+			break;
+		case TRANSPORTER_STATUS_FAILED:
+		default:
+			status_str = "ERROR: TRANSPORT OPERATION FAILED";
+			status_color = UI_COLOR(eng_warning_status);
+			break;
+		}
 	}
 
 	y = txy(365);
