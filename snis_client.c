@@ -6452,6 +6452,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 	case key_eng_preset_7:
 	case key_eng_preset_8:
 	case key_eng_preset_9: {
+			if (eng_ui.subscreen != ENG_ENGINEERING_SUBSCREEN)
+				break;
 			if (key_repeat) /* don't save the time if it's repeating keypress */
 				break;
 			/* save the time of the button press so we can trigger
@@ -6497,8 +6499,13 @@ static int key_release_cb(SDL_Keysym *keysym)
 	case key_eng_preset_7:
 	case key_eng_preset_8:
 	case key_eng_preset_9: {
-			struct timeval now;
 			int n = (int) ka - (int) key_eng_preset_0;
+			if (eng_ui.subscreen != ENG_ENGINEERING_SUBSCREEN)
+				break;
+			if (eng_ui.preset_press_time[n].tv_sec == 0 &&
+			    eng_ui.preset_press_time[n].tv_usec == 0)
+				break;
+			struct timeval now;
 			gettimeofday(&now, NULL);
 			double elapsed_time_ms = timeval_difference(eng_ui.preset_press_time[n], now);
 			memset(&eng_ui.preset_press_time[n], 0, sizeof(eng_ui.preset_press_time[n]));
