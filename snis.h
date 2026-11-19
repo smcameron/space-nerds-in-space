@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS076"
+#define SNIS_PROTOCOL_VERSION "SNIS077"
 #define TRANSPORTER_TAG_LEN 5
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
@@ -719,6 +719,8 @@ struct ship_data {
 /* For distances longer than COMMS_LONG_DISTANCE_THRESHOLD comms may not work perfectly. */
 #define COMMS_LONG_DISTANCE_THRESHOLD (XKNOWN_DIM / 2.0)
 	uint8_t sci_auto_sweep;
+	uint8_t transporter_freq;     /* 0-255, mapped to 0.0-1.0 */
+	uint8_t transporter_phase;    /* 0-255, mapped to 0.0-1.0 */
 #ifdef SNIS_SERVER_DATA
 	/* Which system (weapons, shields, warp drive, etc.) of player ships to target damage on */
 	uint8_t targeted_system;

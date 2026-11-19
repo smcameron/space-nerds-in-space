@@ -9798,6 +9798,50 @@ static int process_transporter_status(void)
 	return 0;
 }
 
+static int process_transporter_state(void)
+{
+	unsigned char buffer[20];
+	uint32_t id;
+	uint8_t direction, freq, phase;
+	uint8_t raw_tag[TRANSPORTER_TAG_LEN];
+	char tag[TRANSPORTER_TAG_LEN + 1];
+	int rc, i, idx, last_non_space = -1;
+
+	rc = read_and_unpack_buffer(buffer, "wbbbbbbbb", &id, &direction,
+				    &freq, &phase, &raw_tag[0], &raw_tag[1],
+				    &raw_tag[2], &raw_tag[3], &raw_tag[4]);
+	if (rc != 0)
+		return rc;
+
+	for (i = 0; i < TRANSPORTER_TAG_LEN; i++) {
+		char ch = toupper((unsigned char) raw_tag[i]);
+
+		tag[i] = ch;
+		if (ch != ' ' && ch != '\0')
+			last_non_space = i;
+	}
+	tag[last_non_space + 1] = '\0';
+
+	pthread_mutex_lock(&universe_mutex);
+	idx = lookup_object_by_id(id);
+	if (idx >= 0) {
+		go[idx].tsd.ship.transporter_freq = freq;
+		go[idx].tsd.ship.transporter_phase = phase;
+	}
+	if (id == my_ship_id) {
+		eng_ui.transporter_direction = direction;
+		if (strncmp(tag, eng_ui.last_server_transporter_tag,
+			    sizeof(eng_ui.last_server_transporter_tag)) != 0) {
+			strlcpy(eng_ui.last_server_transporter_tag, tag,
+				sizeof(eng_ui.last_server_transporter_tag));
+			strlcpy(eng_ui.transporter_tag_buffer, tag,
+				sizeof(eng_ui.transporter_tag_buffer));
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_custom_button(void);
 static int process_console_op(void);
 static int process_client_config(void);
@@ -10128,6 +10172,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_TRANSPORTER_STATUS:
 			rc = process_transporter_status();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_TRANSPORTER_STATE:
+			rc = process_transporter_state();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -16644,36 +16693,77 @@ static int transporter_from_ship_checked(__attribute__((unused)) void *x)
 	return eng_ui.transporter_direction == OPCODE_TRANSPORTER_DIR_FROM_SHIP;
 }
 
+static void format_transporter_tag_packet_bytes(char tag[TRANSPORTER_TAG_LEN + 1])
+{
+	char *buf;
+	int i;
+
+	buf = snis_text_input_box_get_buffer(eng_ui.transporter_tag_input);
+	memset(tag, ' ', TRANSPORTER_TAG_LEN);
+	tag[TRANSPORTER_TAG_LEN] = '\0';
+	if (buf) {
+		for (i = 0; i < TRANSPORTER_TAG_LEN && buf[i] != '\0'; i++)
+			tag[i] = toupper((unsigned char) buf[i]);
+	}
+}
+
+static void send_transporter_tag_to_server(void)
+{
+	struct snis_entity *o;
+	uint32_t ship_id;
+	char tag[TRANSPORTER_TAG_LEN + 1];
+
+	pthread_mutex_lock(&universe_mutex);
+	o = find_my_ship();
+	if (!o) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	ship_id = o->id;
+	pthread_mutex_unlock(&universe_mutex);
+
+	format_transporter_tag_packet_bytes(tag);
+	queue_to_server(snis_opcode_pkt("bwbbbbbb",
+					OPCODE_SET_TRANSPORTER_TAG,
+					ship_id,
+					(uint8_t) eng_ui.transporter_direction,
+					(uint8_t) tag[0],
+					(uint8_t) tag[1],
+					(uint8_t) tag[2],
+					(uint8_t) tag[3],
+					(uint8_t) tag[4]));
+}
+
 static void transporter_to_ship_pressed(__attribute__((unused)) void *x)
 {
 	eng_ui.transporter_direction = OPCODE_TRANSPORTER_DIR_TO_SHIP;
+	send_transporter_tag_to_server();
 }
 
 static void transporter_from_ship_pressed(__attribute__((unused)) void *x)
 {
 	eng_ui.transporter_direction = OPCODE_TRANSPORTER_DIR_FROM_SHIP;
+	send_transporter_tag_to_server();
+}
+
+static void transporter_tag_return_pressed(__attribute__((unused)) void *x)
+{
+	send_transporter_tag_to_server();
 }
 
 #define TRANSPORTER_LOCK_THRESHOLD 80
 
-static double sample_transporter_freq(void)
-{
-	return eng_ui.transporter_freq;
-}
-
-static double sample_transporter_phase(void)
-{
-	return eng_ui.transporter_phase;
-}
+DEFINE_SAMPLER_FUNCTION(sample_transporter_freq, tsd.ship.transporter_freq, 255.0, 0.0)
+DEFINE_SAMPLER_FUNCTION(sample_transporter_phase, tsd.ship.transporter_phase, 255.0, 0.0)
 
 static void do_transporter_freq(struct slider *s)
 {
-	eng_ui.transporter_freq = snis_slider_get_input(s);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_TRANSPORTER_FREQ);
 }
 
 static void do_transporter_phase(struct slider *s)
 {
-	eng_ui.transporter_phase = snis_slider_get_input(s);
+	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_TRANSPORTER_PHASE);
 }
 
 static float clampf_unit(float v, float lo, float hi)
@@ -16759,10 +16849,13 @@ static void compute_transporter_signal(struct snis_entity *o, int *has_signal,
 	*target_phase = clampf_unit(*target_phase, 0.05f, 0.95f);
 }
 
-static int compute_transporter_lock_pct(float target_freq, float target_phase)
+static int compute_transporter_lock_pct(struct snis_entity *o,
+					float target_freq, float target_phase)
 {
-	float df = fabsf((float) eng_ui.transporter_freq - target_freq);
-	float dp = fabsf((float) eng_ui.transporter_phase - target_phase);
+	float user_freq = (float) o->tsd.ship.transporter_freq / 255.0f;
+	float user_phase = (float) o->tsd.ship.transporter_phase / 255.0f;
+	float df = fabsf(user_freq - target_freq);
+	float dp = fabsf(user_phase - target_phase);
 	float err = sqrtf(df * df + dp * dp);
 	int pct = (int) (100.0f * (1.0f - err / 0.22f));
 
@@ -16776,11 +16869,9 @@ static int compute_transporter_lock_pct(float target_freq, float target_phase)
 static void transporter_energize_pressed(__attribute__((unused)) void *x)
 {
 	struct snis_entity *o;
-	char *buf;
 	char tag[TRANSPORTER_TAG_LEN + 1];
 	int has_signal, lock_pct;
 	float target_freq, target_phase, amp, noise;
-	int i;
 
 	pthread_mutex_lock(&universe_mutex);
 	o = find_my_ship();
@@ -16791,7 +16882,7 @@ static void transporter_energize_pressed(__attribute__((unused)) void *x)
 	compute_transporter_signal(o, &has_signal, &target_freq,
 				   &target_phase, &amp, &noise);
 	lock_pct = has_signal ?
-		   compute_transporter_lock_pct(target_freq, target_phase) : 0;
+		   compute_transporter_lock_pct(o, target_freq, target_phase) : 0;
 	pthread_mutex_unlock(&universe_mutex);
 
 	if (has_signal && lock_pct < TRANSPORTER_LOCK_THRESHOLD) {
@@ -16801,13 +16892,7 @@ static void transporter_energize_pressed(__attribute__((unused)) void *x)
 	}
 	eng_ui.transporter_lock_warning = 0;
 
-	buf = snis_text_input_box_get_buffer(eng_ui.transporter_tag_input);
-	memset(tag, ' ', TRANSPORTER_TAG_LEN);
-	tag[TRANSPORTER_TAG_LEN] = '\0';
-	if (buf) {
-		for (i = 0; i < TRANSPORTER_TAG_LEN && buf[i] != '\0'; i++)
-			tag[i] = toupper((unsigned char) buf[i]);
-	}
+	format_transporter_tag_packet_bytes(tag);
 
 	queue_to_server(snis_opcode_pkt("bwbbbbbb",
 					OPCODE_REQUEST_TRANSPORTER,
@@ -17223,9 +17308,9 @@ static void init_engineering_ui(void)
 	eu->transporter_status = TRANSPORTER_STATUS_IDLE;
 	eu->transporter_progress = 0;
 	eu->transporter_waveform_phase = 0;
-	eu->transporter_freq = 0.5;
-	eu->transporter_phase = 0.5;
 	eu->transporter_lock_warning = 0;
+	memset(eu->last_server_transporter_tag, 0,
+	       sizeof(eu->last_server_transporter_tag));
 	memset(eu->transporter_tag_buffer, 0, sizeof(eu->transporter_tag_buffer));
 
 	eu->transporter_tag_input = snis_text_input_box_init(txx(240), txy(120),
@@ -17235,7 +17320,7 @@ static void init_engineering_ui(void)
 						sizeof(eu->transporter_tag_buffer),
 						&timer, NULL, NULL);
 	snis_text_input_box_set_return(eu->transporter_tag_input,
-				       transporter_energize_pressed);
+				       transporter_tag_return_pressed);
 
 	eu->transporter_to_ship_button = snis_button_init(txx(60), txy(165),
 						-1, txy(25), "BEAM TO SHIP",
@@ -17265,19 +17350,19 @@ static void init_engineering_ui(void)
 	eu->transporter_freq_slider = snis_slider_init(txx(60), txy(332),
 						txx(220), txy(16),
 						UI_COLOR(eng_power_meter),
-						"FREQ", "LO", "HI", 0.0, 1.0,
+						"FREQ", "LO", "HI", 0.0, 100.0,
 						sample_transporter_freq,
 						do_transporter_freq);
-	snis_slider_set_input(eu->transporter_freq_slider, eu->transporter_freq);
+	snis_slider_set_input(eu->transporter_freq_slider, 0.5);
 	snis_slider_set_fuzz(eu->transporter_freq_slider, 0);
 
 	eu->transporter_phase_slider = snis_slider_init(txx(350), txy(332),
 						txx(220), txy(16),
 						UI_COLOR(eng_power_meter),
-						"PHASE", "-PI", "+PI", 0.0, 1.0,
+						"PHASE", "-PI", "+PI", 0.0, 100.0,
 						sample_transporter_phase,
 						do_transporter_phase);
-	snis_slider_set_input(eu->transporter_phase_slider, eu->transporter_phase);
+	snis_slider_set_input(eu->transporter_phase_slider, 0.5);
 	snis_slider_set_fuzz(eu->transporter_phase_slider, 0);
 
 	ui_add_text_input_box(eu->transporter_tag_input, dm);
@@ -17396,9 +17481,9 @@ static void draw_transporter_waveform(int x, int y, int w, int h,
 	float phase_step = active ? 0.08f : 0.02f;
 	float anim_phase;
 	float target_cycles = 2.0f + target_freq * 10.0f;
-	float user_cycles = 2.0f + (float) eng_ui.transporter_freq * 10.0f;
+	float user_cycles = 2.0f + ((float) o->tsd.ship.transporter_freq / 255.0f) * 10.0f;
 	float target_off = target_phase * 2.0f * (float) M_PI;
-	float user_off = (float) eng_ui.transporter_phase * 2.0f * (float) M_PI;
+	float user_off = ((float) o->tsd.ship.transporter_phase / 255.0f) * 2.0f * (float) M_PI;
 	float beam_amp;
 	int pwr = o->tsd.ship.power_data.transporter.i;
 	int beam_color;
@@ -17510,11 +17595,17 @@ static void show_transporter(void)
 	sng_abs_xy_draw_string("TRANSPORTER TAG:", NANO_FONT,
 				txx(60), txy(138));
 
+	/* Sync frequency/phase sliders with server state */
+	snis_slider_set_input(eng_ui.transporter_freq_slider,
+			      o->tsd.ship.transporter_freq / 255.0);
+	snis_slider_set_input(eng_ui.transporter_phase_slider,
+			      o->tsd.ship.transporter_phase / 255.0);
+
 	/* Compute signal & lock quality */
 	compute_transporter_signal(o, &has_signal, &target_freq,
 				   &target_phase, &amp, &noise);
 	lock_pct = has_signal ?
-		   compute_transporter_lock_pct(target_freq, target_phase) : 0;
+		   compute_transporter_lock_pct(o, target_freq, target_phase) : 0;
 
 	/* Waveform display */
 	x = txx(60);

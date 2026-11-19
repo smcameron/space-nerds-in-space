@@ -550,6 +550,8 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_CHECK_OPCODE_FORMAT</td><td>237</td</tr>
 <tr><td>OPCODE_REQUEST_STARMAP</td><td>238</td</tr>
 <tr><td>OPCODE_WLED_COMMAND</td><td>245</td></tr>
+<tr><td>OPCODE_SET_TRANSPORTER_TAG</td><td>246</td></tr>
+<tr><td>OPCODE_TRANSPORTER_STATE</td><td>247</td></tr>
 <tr><td>OPCODE_NOOP</td><td>0xff</td></tr>
 </table>
 
@@ -2558,6 +2560,34 @@ array of waypoints.
 <tr><td>3</td><td>b</td><td>Green (0 - 255)</td></tr>
 <tr><td>4</td><td>b</td><td>Blue (0 - 255)</td></tr>
 <tr><td>5</td><td>h</td><td>Duration in milliseconds (for flash command)</td></tr>
+</table>
+
+<h4>246 SET TRANSPORTER TAG PACKET</h4> (Client to Server)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
+<tr><td>0</td><td>b</td><td>246</td></tr>
+<tr><td>1</td><td>w</td><td>Ship Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>Direction (0 = from ship, 1 = to ship)</td></tr>
+<tr><td>6</td><td>b</td><td>Transporter tag char 0</td></tr>
+<tr><td>7</td><td>b</td><td>Transporter tag char 1</td></tr>
+<tr><td>8</td><td>b</td><td>Transporter tag char 2</td></tr>
+<tr><td>9</td><td>b</td><td>Transporter tag char 3</td></tr>
+<tr><td>10</td><td>b</td><td>Transporter tag char 4</td></tr>
+</table>
+
+<h4>247 TRANSPORTER STATE PACKET</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td></tr>
+<tr><td>0</td><td>b</td><td>247</td></tr>
+<tr><td>1</td><td>w</td><td>Ship Object ID</td></tr>
+<tr><td>5</td><td>b</td><td>Direction (0 = from ship, 1 = to ship)</td></tr>
+<tr><td>6</td><td>b</td><td>Frequency (0 - 255)</td></tr>
+<tr><td>7</td><td>b</td><td>Phase (0 - 255)</td></tr>
+<tr><td>8</td><td>b</td><td>Transporter tag char 0</td></tr>
+<tr><td>9</td><td>b</td><td>Transporter tag char 1</td></tr>
+<tr><td>10</td><td>b</td><td>Transporter tag char 2</td></tr>
+<tr><td>11</td><td>b</td><td>Transporter tag char 3</td></tr>
+<tr><td>12</td><td>b</td><td>Transporter tag char 4</td></tr>
 </table>
 
 <h4>255 No-Op</h4>

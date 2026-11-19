@@ -13415,7 +13415,9 @@ static void init_player(struct snis_entity *o)
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	o->tsd.ship.transporter_active = 0;
-	o->tsd.ship.transporter_direction = 0;
+	o->tsd.ship.transporter_direction = OPCODE_TRANSPORTER_DIR_TO_SHIP;
+	o->tsd.ship.transporter_freq = 128;
+	o->tsd.ship.transporter_phase = 128;
 	o->tsd.ship.transporter_progress = 0;
 	o->tsd.ship.transporter_timer = 0;
 	o->tsd.ship.transporter_target = (uint32_t) -1;
@@ -17812,6 +17814,28 @@ static int process_role_onscreen(struct game_client *c)
 	return 0;
 }
 
+static void send_transporter_state(struct snis_entity *o)
+{
+	char tag[TRANSPORTER_TAG_LEN + 1];
+	int i;
+
+	memset(tag, ' ', TRANSPORTER_TAG_LEN);
+	tag[TRANSPORTER_TAG_LEN] = '\0';
+	for (i = 0; i < TRANSPORTER_TAG_LEN &&
+		    o->tsd.ship.transporter_tag[i] != '\0'; i++)
+		tag[i] = o->tsd.ship.transporter_tag[i];
+
+	send_packet_to_all_clients_on_a_bridge(o->id,
+		snis_opcode_pkt("bwbbbbbbbb", OPCODE_TRANSPORTER_STATE,
+				o->id,
+				o->tsd.ship.transporter_direction,
+				o->tsd.ship.transporter_freq,
+				o->tsd.ship.transporter_phase,
+				(uint8_t) tag[0], (uint8_t) tag[1],
+				(uint8_t) tag[2], (uint8_t) tag[3],
+				(uint8_t) tag[4]), ROLE_ALL);
+}
+
 static int process_select_subscreen(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -17828,6 +17852,16 @@ static int process_select_subscreen(struct game_client *c)
 	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
 			new_details), ROLE_PROJECTOR);
+	if (new_details == OPCODE_SUBSCREEN_TRANSPORTER) {
+		int idx;
+
+		pthread_mutex_lock(&universe_mutex);
+		idx = lookup_by_id(c->shipid);
+		if (idx >= 0 && go[idx].alive &&
+		    go[idx].type == OBJTYPE_BRIDGE)
+			send_transporter_state(&go[idx]);
+		pthread_mutex_unlock(&universe_mutex);
+	}
 	return 0;
 }
 
@@ -26031,6 +26065,25 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.sci_auto_sweep), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_TRANSPORTER_FREQ:
+	case OPCODE_ADJUST_CONTROL_TRANSPORTER_PHASE: {
+		int offset = (subcode == OPCODE_ADJUST_CONTROL_TRANSPORTER_FREQ) ?
+			offsetof(struct snis_entity, tsd.ship.transporter_freq) :
+			offsetof(struct snis_entity, tsd.ship.transporter_phase);
+
+		rc = process_adjust_control_bytevalue(c, id, offset, v, no_limit);
+		if (!rc) {
+			int idx;
+
+			pthread_mutex_lock(&universe_mutex);
+			idx = lookup_by_id(id);
+			if (idx >= 0 && go[idx].alive &&
+			    go[idx].type == OBJTYPE_BRIDGE)
+				send_transporter_state(&go[idx]);
+			pthread_mutex_unlock(&universe_mutex);
+		}
+		return rc;
+	}
 	default:
 		return -1;
 	}
@@ -26265,6 +26318,55 @@ static void process_transporter_tick(struct snis_entity *o)
 	}
 }
 
+static void format_transporter_tag(char *dst, size_t dst_size,
+				   const uint8_t raw_tag[TRANSPORTER_TAG_LEN])
+{
+	int i, last_non_space = -1;
+
+	for (i = 0; i < TRANSPORTER_TAG_LEN && i < (int) dst_size - 1; i++) {
+		char ch = toupper((unsigned char) raw_tag[i]);
+
+		dst[i] = ch;
+		if (ch != ' ' && ch != '\0')
+			last_non_space = i;
+	}
+	dst[last_non_space + 1] = '\0';
+}
+
+static int process_set_transporter_tag(struct game_client *c)
+{
+	int rc, i;
+	uint32_t id;
+	uint8_t direction;
+	uint8_t raw_tag[TRANSPORTER_TAG_LEN];
+	unsigned char buffer[20];
+	struct snis_entity *ship;
+
+	rc = read_and_unpack_buffer(c, buffer, "wbbbbbb", &id, &direction,
+				    &raw_tag[0], &raw_tag[1], &raw_tag[2],
+				    &raw_tag[3], &raw_tag[4]);
+	if (rc)
+		return rc;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0 || !go[i].alive || go[i].type != OBJTYPE_BRIDGE) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	ship = &go[i];
+	ship->tsd.ship.transporter_direction =
+		(direction == OPCODE_TRANSPORTER_DIR_FROM_SHIP) ?
+		OPCODE_TRANSPORTER_DIR_FROM_SHIP :
+		OPCODE_TRANSPORTER_DIR_TO_SHIP;
+	format_transporter_tag(ship->tsd.ship.transporter_tag,
+			       sizeof(ship->tsd.ship.transporter_tag),
+			       raw_tag);
+	send_transporter_state(ship);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_request_transporter(struct game_client *c)
 {
 	int rc, i, j, k, p;
@@ -26293,6 +26395,15 @@ static int process_request_transporter(struct game_client *c)
 		return 0;
 	}
 	ship = &go[i];
+
+	ship->tsd.ship.transporter_direction =
+		(direction == OPCODE_TRANSPORTER_DIR_FROM_SHIP) ?
+		OPCODE_TRANSPORTER_DIR_FROM_SHIP :
+		OPCODE_TRANSPORTER_DIR_TO_SHIP;
+	format_transporter_tag(ship->tsd.ship.transporter_tag,
+			       sizeof(ship->tsd.ship.transporter_tag),
+			       raw_tag);
+	send_transporter_state(ship);
 
 	if (ship->tsd.ship.transporter_active) {
 		send_transporter_status(ship, TRANSPORTER_STATUS_IN_PROGRESS,
@@ -27416,6 +27527,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_TRANSPORTER:
 			rc = process_request_transporter(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SET_TRANSPORTER_TAG:
+			rc = process_set_transporter_tag(c);
 			if (rc)
 				goto protocol_error;
 			break;
