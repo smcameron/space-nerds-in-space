@@ -10574,10 +10574,6 @@ static void player_collision_detection(void *player, void *object)
 
 	dist2 = object_dist2(o, t);
 	if (t->type == OBJTYPE_CARGO_CONTAINER) {
-		if (dist2 < cargo_container_pickup_distance * cargo_container_pickup_distance) {
-			scoop_up_cargo(o, t);
-			return;
-		}
 		/* Prevent nearby cargo containers from disappearing */
 		if (dist2 < SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE)
 			t->alive = CARGO_CONTAINER_LIFETIME;
