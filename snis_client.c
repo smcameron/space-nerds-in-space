@@ -17347,8 +17347,8 @@ static void init_engineering_ui(void)
 	snis_button_set_sound(eu->transporter_energize_button, UISND1);
 	snis_button_set_hover_color(eu->transporter_energize_button, hover_color);
 
-	eu->transporter_freq_slider = snis_slider_init(txx(60), txy(332),
-						txx(220), txy(16),
+	eu->transporter_freq_slider = snis_slider_init(txx(60), txy(322),
+						txx(640), txy(16),
 						UI_COLOR(eng_power_meter),
 						"FREQ", "LO", "HI", 0.0, 100.0,
 						sample_transporter_freq,
@@ -17356,8 +17356,8 @@ static void init_engineering_ui(void)
 	snis_slider_set_input(eu->transporter_freq_slider, 0.5);
 	snis_slider_set_fuzz(eu->transporter_freq_slider, 0);
 
-	eu->transporter_phase_slider = snis_slider_init(txx(350), txy(332),
-						txx(220), txy(16),
+	eu->transporter_phase_slider = snis_slider_init(txx(60), txy(354),
+						txx(640), txy(16),
 						UI_COLOR(eng_power_meter),
 						"PHASE", "-PI", "+PI", 0.0, 100.0,
 						sample_transporter_phase,
@@ -17611,11 +17611,11 @@ static void show_transporter(void)
 	x = txx(60);
 	y = txy(198);
 	w = txx(680);
-	h = txy(118);
+	h = txy(108);
 	draw_transporter_waveform(x, y, w, h, o, has_signal, target_freq,
 				  target_phase, amp, noise, lock_pct);
 
-	/* Pattern lock readout next to FREQ / PHASE sliders */
+	/* Pattern lock readout on the button row */
 	if (!has_signal) {
 		snprintf(buf, sizeof(buf), "LOCK: --- [NO SIGNAL]");
 		sng_set_foreground(UI_COLOR(eng_caution_status));
@@ -17626,7 +17626,7 @@ static void show_transporter(void)
 		snprintf(buf, sizeof(buf), "LOCK: %3d%% [ALIGN]", lock_pct);
 		sng_set_foreground(UI_COLOR(eng_caution_status));
 	}
-	sng_abs_xy_draw_string(buf, PICO_FONT, txx(590), txy(346));
+	sng_abs_xy_draw_string(buf, PICO_FONT, txx(535), txy(182));
 
 	/* Status display */
 	if (eng_ui.transporter_lock_warning > 0) {
@@ -17675,13 +17675,13 @@ static void show_transporter(void)
 		}
 	}
 
-	y = txy(365);
+	y = txy(392);
 	sng_set_foreground(status_color);
 	snprintf(buf, sizeof(buf), "STATUS: %s", status_str);
 	sng_abs_xy_draw_string(buf, NANO_FONT, x, y);
 
 	/* Progress bar */
-	y = txy(395);
+	y = txy(422);
 	sng_set_foreground(UI_COLOR(eng_power_meter));
 	snprintf(buf, sizeof(buf), "PROGRESS: %3d%%",
 		 eng_ui.transporter_progress);
@@ -17698,7 +17698,7 @@ static void show_transporter(void)
 	}
 
 	/* Target information from science selection */
-	y = txy(435);
+	y = txy(458);
 	if (curr_science_guy && curr_science_guy->alive) {
 		dist = object_dist(o, curr_science_guy);
 		if (curr_science_guy->sdata.name[0] != '\0') {
@@ -17728,7 +17728,7 @@ static void show_transporter(void)
 	}
 
 	/* Transporter subsystem power and damage status */
-	y = txy(465);
+	y = txy(488);
 	pwr = o->tsd.ship.power_data.transporter.i;
 	dmg = o->tsd.ship.damage.transporter_damage;
 	online = (pwr >= 25 && dmg < 200);
