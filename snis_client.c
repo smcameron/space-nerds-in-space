@@ -16686,8 +16686,8 @@ static float clampf_unit(float v, float lo, float hi)
 }
 
 /*
- * Compute target carrier waveform parameters from the entered transporter tag,
- * science target (range & relative velocity), and transporter subsystem damage.
+ * Compute target carrier waveform parameters from the entered transporter tag
+ * and science target (range & relative velocity).
  * Caller must hold universe_mutex.
  */
 static void compute_transporter_signal(struct snis_entity *o, int *has_signal,
@@ -16755,7 +16755,6 @@ static void compute_transporter_signal(struct snis_entity *o, int *has_signal,
 		*noise = 0.03f;
 	}
 
-	*noise += 0.20f * ((float) o->tsd.ship.damage.transporter_damage / 255.0f);
 	*target_freq = clampf_unit(*target_freq, 0.05f, 0.95f);
 	*target_phase = clampf_unit(*target_phase, 0.05f, 0.95f);
 }
