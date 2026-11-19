@@ -1,6 +1,6 @@
 -- Test script for Transporter functionality.
 -- Places the player ship in open space with 8 stationary cargo containers
--- arranged around it within transporter range (1500 units).
+-- arranged around it within transporter range (2500 units).
 
 clear_all();
 
@@ -12,7 +12,7 @@ end
 
 local px, py, pz = 100000, 0, 100000;
 local num_containers = 8;
-local radius = 800; -- comfortably within TRANSPORTER_RANGE (1500)
+local radius = 800; -- comfortably within TRANSPORTER_RANGE (2500)
 
 move_object(player_ids[1], px, py, pz);
 set_object_velocity(player_ids[1], 0, 0, 0);

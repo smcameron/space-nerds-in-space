@@ -513,7 +513,7 @@ struct ship_data {
 #define MINIMUM_ATTACK_SPEED 3.0
 #define MINIMUM_TURN_SPEED 5.0
 #define MAX_SLOW_TURN_ANGLE 2 /* degrees */
-#define TRANSPORTER_RANGE 1500.0f
+#define TRANSPORTER_RANGE 2500.0f
 #define TRANSPORTER_DURATION 50   /* ticks (~5 seconds at 10Hz) */
 #define TRANSPORTER_POWER_THRESHOLD 190 /* minimum power level (out of 255) */
 #define BOUNTY_CHANCE (0.1)

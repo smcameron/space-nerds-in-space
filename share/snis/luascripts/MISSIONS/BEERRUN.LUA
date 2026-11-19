@@ -399,7 +399,7 @@ if beer_container_id then
 	set_cargo_container_transporter_tag(beer_container_id, beer_tag);
 	attach_science_text(beer_container_id,
 		"CONTRABAND: 400 kegs of genuine Coors Beer brewed in Golden City.\n" ..
-		"Transporter tag: " .. beer_tag .. ". Requires transporter beam within 1500 units.");
+		"Transporter tag: " .. beer_tag .. ". Requires transporter beam within 2500 units.");
 end
 
 -- Princess Frogg passenger setup at Chapel Station SB-7
@@ -781,10 +781,10 @@ function check_pickup_proximity()
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "Atlanta hauler, we see you on approach!");
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "400 kegs of cold Coors are staged in orbit.");
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "CONTAINER TRANSPORTER TAG IS '" .. beer_tag .. "'.");
-		comms_channel_transmit("Brewmaster (Golden City)", 0, "GET WITHIN TRANSPORTER RANGE (1500 units)");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "GET WITHIN TRANSPORTER RANGE (2500 units)");
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "AND ENERGIZE TO LOAD CARGO!");
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "---");
-		text_to_speech(player_id, "Brewery contacted. Transporter tag is " .. beer_tag .. ". Close to fifteen hundred units.");
+		text_to_speech(player_id, "Brewery contacted. Transporter tag is " .. beer_tag .. ". Close to twenty five hundred units.");
 	end
 end
 
