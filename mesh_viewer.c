@@ -414,7 +414,6 @@ static void handle_key_down(SDL_Keysym *keysym)
 				atmosphere_brightness = 0.0;
 			break;
 		}
-		show_full_mesh();
 		break;
 	case SDLK_RIGHTBRACKET:
 		if (exhaust_mode) {
@@ -429,6 +428,11 @@ static void handle_key_down(SDL_Keysym *keysym)
 				atmosphere_brightness = 1.0;
 			break;
 		}
+		break;
+	case SDLK_SEMICOLON:
+		show_full_mesh();
+		break;
+	case SDLK_QUOTE:
 		show_simplified_mesh();
 		break;
 	case SDLK_t:
