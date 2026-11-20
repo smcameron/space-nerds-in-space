@@ -65,6 +65,8 @@ struct ship_type_entry {
 	float mass_kg;
 	uint8_t max_shield_strength;
 	float scrap_value;
+	int decimation_factor;
+	int min_tris;
 	struct hard_point hard_point;
 };
 

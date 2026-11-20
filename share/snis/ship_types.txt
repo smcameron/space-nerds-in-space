@@ -16,6 +16,8 @@
 #	extra scaling: 1.0
 #	relative mass: 1.0
 #	scrap_value: 2500.0
+#	decimation factor: 8
+#	min tris: 64
 #	x rotation:
 #	y rotation:
 #	z rotation:
@@ -45,6 +47,11 @@
 # All fields are optional; the defaults are the values shown above, except for
 # position, which defaults to 0 0 0.
 #
+# 
+# decimation factor controls how many triangles a generated low poly model has (e.g. the full
+# poly model triangle count divided by this number). min_tris controls the minimum number of
+# triangles the low poly model will have, in case the decimation factor drops it too low.
+# decimation factor and min_tries are optional, with default values of 8 and 64 respectively.
 
 ship type {
 	class: CRUISER

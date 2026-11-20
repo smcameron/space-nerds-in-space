@@ -16,6 +16,8 @@
 #	extra scaling: 1.0
 #	relative mass: 1.0
 #	scrap_value: 2500.0
+#	decimation factor: 8
+#	min tris: 64
 #	x rotation:
 #	y rotation:
 #	z rotation:
@@ -61,6 +63,8 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 1.0
 	scrap_value: 2500.0
+	decimation factor: 4
+	min tris: 128
 }
 
 ship type {

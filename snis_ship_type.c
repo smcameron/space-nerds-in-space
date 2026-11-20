@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include "snis_ship_type.h"
 #include "string-utils.h"
@@ -192,7 +193,11 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	float relative_mass;
 	int errorcount = 0;
 #define DEFAULT_SCRAP_VALUE 2500.0f
+#define DEFAULT_SHIP_DECIMATION_FACTOR 8
+#define DEFAULT_SHIP_MIN_TRIS 64
 	float scrap_value = DEFAULT_SCRAP_VALUE;
+	int decimation_factor = DEFAULT_SHIP_DECIMATION_FACTOR;
+	int min_tris = DEFAULT_SHIP_MIN_TRIS;
 	struct hard_point_spec hps;
 	int in_hard_point = 0;
 
@@ -303,6 +308,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			has_missiles = 0;
 			extra_scaling = 1.0;
 			relative_mass = 1.0;
+			decimation_factor = DEFAULT_SHIP_DECIMATION_FACTOR;
+			min_tris = DEFAULT_SHIP_MIN_TRIS;
 			rot[0] = 0.0;
 			rot[1] = 0.0;
 			rot[2] = 0.0;
@@ -352,6 +359,10 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			errorcount += parse_float_field(&relative_mass, filename, line, linecount);
 		} else if (has_prefix("scrap_value:", line)) {
 			errorcount += parse_float_field(&scrap_value, filename, line, linecount);
+		} else if (has_prefix("decimation factor:", line)) {
+			errorcount += parse_int_field(&decimation_factor, filename, line, linecount);
+		} else if (has_prefix("min tris:", line)) {
+			errorcount += parse_int_field(&min_tris, filename, line, linecount);
 		} else if (has_prefix("x rotation:", line)) {
 			if (!parse_float_field(&rot[nrots], filename, line, linecount)) {
 				axis[nrots] = 'x';
@@ -400,6 +411,13 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 				toughness = 1.0;
 			}
 
+			if (decimation_factor < 1) {
+				fprintf(stderr, "%s:%d: decimation factor %d for class %s out of range, using %d\n",
+					filename, linecount, decimation_factor, class,
+					DEFAULT_SHIP_DECIMATION_FACTOR);
+				decimation_factor = DEFAULT_SHIP_DECIMATION_FACTOR;
+			}
+
 			/* exceeded allocated capacity */
 			if (n >= nalloced) {
 				struct ship_type_entry *newst;
@@ -440,6 +458,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			st[n].relative_mass = relative_mass;
 			st[n].mass_kg = relative_mass * 330000.0; /* max takeoff weight of 747 in kg */
 			st[n].scrap_value = scrap_value;
+			st[n].decimation_factor = decimation_factor;
+			st[n].min_tris = min_tris;
 			errorcount += finish_hard_point(&hps, SHIP_MESH_SCALE * extra_scaling,
 						&st[n].hard_point, class, filename, linecount);
 
@@ -517,7 +537,65 @@ int main(int argc, char *argv[])
 			hp->azimuth_lower_limit * 180.0 / M_PI,
 			hp->azimuth_upper_limit * 180.0 / M_PI);
 	}
+	for (int i = 0; i < count; i++) {
+		if (ste[i].decimation_factor < 1 || ste[i].min_tris < 1) {
+			fprintf(stderr, "%s: invalid decimation_factor=%d or min_tris=%d\n",
+				ste[i].class, ste[i].decimation_factor, ste[i].min_tris);
+			exit(1);
+		}
+	}
 	snis_free_ship_type(ste, count);
+
+	/* Verify default and custom decimation_factor / min_tris and no bleed across entries */
+	{
+		char tmpname[] = "/tmp/test_ship_types_XXXXXX";
+		int fd = mkstemp(tmpname);
+		FILE *tf;
+
+		if (fd < 0) {
+			perror("mkstemp");
+			exit(1);
+		}
+		tf = fdopen(fd, "w");
+		if (!tf) {
+			perror("fdopen");
+			close(fd);
+			unlink(tmpname);
+			exit(1);
+		}
+		fprintf(tf,
+			"ship type {\n"
+			"	class: TEST_CUSTOM\n"
+			"	model file: test.stl\n"
+			"	toughness: 0.5\n"
+			"	decimation factor: 4\n"
+			"	min tris: 128\n"
+			"}\n"
+			"ship type {\n"
+			"	class: TEST_DEFAULT\n"
+			"	model file: test2.stl\n"
+			"	toughness: 0.5\n"
+			"}\n");
+		fclose(tf);
+		ste = snis_read_ship_types(tmpname, &count);
+		unlink(tmpname);
+		if (!ste || count != 2) {
+			fprintf(stderr, "Expected 2 test ship types, got %d\n", count);
+			exit(1);
+		}
+		if (ste[0].decimation_factor != 4 || ste[0].min_tris != 128) {
+			fprintf(stderr, "TEST_CUSTOM mismatch: decimation_factor=%d min_tris=%d\n",
+				ste[0].decimation_factor, ste[0].min_tris);
+			exit(1);
+		}
+		if (ste[1].decimation_factor != DEFAULT_SHIP_DECIMATION_FACTOR ||
+		    ste[1].min_tris != DEFAULT_SHIP_MIN_TRIS) {
+			fprintf(stderr, "TEST_DEFAULT mismatch: decimation_factor=%d min_tris=%d\n",
+				ste[1].decimation_factor, ste[1].min_tris);
+			exit(1);
+		}
+		snis_free_ship_type(ste, count);
+	}
 	return 0;
 }
 #endif

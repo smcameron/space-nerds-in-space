@@ -28060,8 +28060,14 @@ static void init_meshes(void)
 		}
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
 		if (ship_mesh_map[i]) {
+			int decimation_factor = ship_type[i].decimation_factor;
+			int min_tris = ship_type[i].min_tris;
+
+			if (decimation_factor < 1)
+				decimation_factor = 8;
 			ship_lp_mesh_map[i] = mesh_simplify(ship_mesh_map[i],
-							    ship_mesh_map[i]->ntriangles / 8, 64);
+							    ship_mesh_map[i]->ntriangles / decimation_factor,
+							    min_tris);
 			if (ship_lp_mesh_map[i])
 				mesh_set_low_poly_pixel_threshold(ship_lp_mesh_map[i], 40.0f);
 		}
