@@ -698,6 +698,7 @@ static struct mesh *nebula_mesh;
 static struct mesh *sun_mesh;
 static struct mesh *unit_quad;
 static struct mesh *thrust_animation_mesh;
+static struct mesh *thrust_animation_lp_mesh;
 static struct mesh *warpgate_mesh;
 static struct mesh *warpgate_effect_mesh;
 static struct mesh *warp_core_mesh;
@@ -11024,6 +11025,7 @@ static void add_thrust_entities(struct entity *thrust_entity[],
 			(*nthrust_ports)++;
 		}
 		if (t) {
+			entity_set_low_poly_mesh(t, thrust_animation_lp_mesh);
 			update_entity_material(t, &thrust_material[thrust_material_index]);
 			update_entity_orientation(t, &identity_quat);
 			union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
@@ -28127,6 +28129,12 @@ static void init_meshes(void)
 	sun_mesh = mesh_fabricate_billboard(SUN_BILLBOARD_SIZE, SUN_BILLBOARD_SIZE);
 	unit_quad = mesh_fabricate_billboard(1, 1);
 	thrust_animation_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 0.20f);
+	if (thrust_animation_mesh) {
+		thrust_animation_lp_mesh = mesh_simplify(thrust_animation_mesh,
+							 thrust_animation_mesh->ntriangles / 8, 64);
+		if (thrust_animation_lp_mesh)
+			mesh_set_low_poly_pixel_threshold(thrust_animation_lp_mesh, 100.0f);
+	}
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
 	warpgate_effect_mesh = mesh_fabricate_disc(1.0, 32);
