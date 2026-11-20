@@ -68,6 +68,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 1.0
 	scrap_value: 2500.0
+	decimation factor: 4
 }
 
 ship type {
@@ -85,6 +86,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 2.0
 	scrap_value: 5000.0
+	decimation factor: 4
 }
 
 ship type {
@@ -102,6 +104,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 1.1
 	scrap_value: 2700.0
+	decimation factor: 2
 }
 
 ship type {
@@ -170,6 +173,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 1.2
 	scrap_value: 2700.0
+	decimation factor: 2
 }
 
 ship type {
@@ -187,6 +191,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 0.2
 	scrap_value: 500.0
+	decimation factor: 4
 }
 
 ship type {
@@ -221,6 +226,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 1.6
 	scrap_value: 3500.0
+	decimation factor: 4
 }
 
 ship type {
@@ -272,6 +278,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 3.1
 	scrap_value: 7500.0
+	decimation factor: 4
 }
 
 ship type {
@@ -306,6 +313,7 @@ ship type {
 	extra scaling: 1.0
 	relative mass: 3.3
 	scrap_value: 6500.0
+	decimation factor: 4
 }
 
 ship type {
@@ -383,6 +391,7 @@ ship type {
 	extra scaling: 3.0
 	relative mass: 3.9
 	scrap_value: 6900
+	decimation factor: 2
 }
 
 ship type {
