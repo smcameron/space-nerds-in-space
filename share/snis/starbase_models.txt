@@ -2,7 +2,7 @@
 # List of starbase model assets within models/ subdir
 #
 # Format of each line is:
-# starbase-model-file docking-port-file [EASY|HARD]
+# starbase-model-file docking-port-file [EASY|HARD [decimation-factor]]
 # if the docking-port-file is '!', then there is no dockng port file
 # if the docking-port-file is '-', then the docking port file has the
 # standard name, for blah.stl will be blah.docking_port.h
@@ -14,12 +14,15 @@
 # speed is impossible (would require the player to fly sideways) and so
 # EASY mode allows docking to be done successfully.
 #
+# The 4th parameter is the optional decimation factor for the low poly model
+# (an integer >= 1; default is 8).
+#
 
 starbase model count: 6
 
-starbase/starbase.obj ../starbase.docking_ports.h EASY
-starbase2/starbase2.obj ../starbase2.docking_ports.h HARD
-starbase3.stl - HARD
-starbase4.stl - HARD
-starbase5.stl - HARD
-starbase6.stl - HARD
+starbase/starbase.obj ../starbase.docking_ports.h EASY 4
+starbase2/starbase2.obj ../starbase2.docking_ports.h HARD 2
+starbase3.stl - HARD 8
+starbase4.stl - HARD 4
+starbase5.stl - HARD 8
+starbase6.stl - HARD 8

@@ -28032,8 +28032,12 @@ static void init_meshes(void)
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
 		if (starbase_mesh[i]) {
+			int decimation_factor = starbase_metadata[i].decimation_factor;
+
+			if (decimation_factor < 1)
+				decimation_factor = DEFAULT_STARBASE_DECIMATION_FACTOR;
 			starbase_lp_mesh[i] = mesh_simplify(starbase_mesh[i],
-							    starbase_mesh[i]->ntriangles / 8, 64);
+							    starbase_mesh[i]->ntriangles / decimation_factor, 64);
 			if (starbase_lp_mesh[i])
 				mesh_set_low_poly_pixel_threshold(starbase_lp_mesh[i], 40.0f);
 		}

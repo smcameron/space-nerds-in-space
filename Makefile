@@ -478,7 +478,7 @@ TESTPROGS=bin/test-matrix bin/test-mathutils bin/test-space-partition \
 		bin/test_mesh_fracture bin/test_wled \
 		bin/test_key_value_parser bin/test_stringutils \
 		bin/test_transport_contract bin/test_snis_ship_type \
-		bin/test_nonuniform_random_sampler
+		bin/test_nonuniform_random_sampler bin/test_starbase_metadata
 FUZZPROGS=fuzz_obj_parser fuzz_snis_read_ship_types \
 		fuzz_solarsystem_asset_spec_read fuzz_read_thrust_attachments \
 		fuzz_process_manifest fuzz_read_joystick_config \
@@ -795,6 +795,9 @@ bin/snis_launcher bin/update_assets_from_launcher.sh:
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h quat.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o ${BIN}
 	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o $@ snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${OD}/stacktrace.o -lm
+
+bin/test_starbase_metadata: starbase_metadata.c starbase_metadata.h ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -DTEST_STARBASE_METADATA -o $@ starbase_metadata.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
 $(OD)/snis_faction.o:	string-utils.h
 $(OD)/joystick_web.o:	joystick.h
