@@ -948,15 +948,15 @@ static void draw_screen(void)
 			snprintf(stat_buffer, sizeof(stat_buffer), "fps %5.2f", 1.0 / avg_frame_rate);
 		else
 			snprintf(stat_buffer, sizeof(stat_buffer), "fps ?????.??");
-		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 2, 10);
+		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 2, 25);
 		snprintf(stat_buffer, sizeof(stat_buffer), "t %0.2f ms", avg_frame_time * 1000.0);
-		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 92, 10);
+		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 200, 25);
 		if (target_mesh) {
 			snprintf(stat_buffer, sizeof(stat_buffer),
 				 "verts %d tris %d (%s)",
 				 target_mesh->nvertices, target_mesh->ntriangles,
 				 showing_simplified ? "simplified" : "full");
-			sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 185, 10);
+			sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 450, 25);
 		}
 	}
 	if (display_frame_stats > 1)
