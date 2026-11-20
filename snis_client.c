@@ -671,6 +671,7 @@ static struct mesh *nav_planetary_ring_mesh;
 static struct mesh *ring_dust_slab_mesh;
 static struct mesh *ring_dust_cam_box_mesh;
 static struct mesh **starbase_mesh;
+static struct mesh **starbase_lp_mesh;
 static int nstarbase_models = -1;
 static struct starbase_file_metadata *starbase_metadata;
 static struct docking_port_attachment_point **docking_port_info;
@@ -734,6 +735,7 @@ static const float lens_flare_ghost_displacement[NLENS_FLARE_GHOSTS] = {
 #endif
 
 static struct mesh **ship_mesh_map;
+static struct mesh **ship_lp_mesh_map;
 static struct mesh **derelict_mesh;
 
 #define NNEBULA_MATERIALS 20
@@ -1540,6 +1542,8 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 	if (i < 0) {
 		memset(thrust_entity, 0, sizeof(thrust_entity));
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
+		if (e && ship_lp_mesh_map[shiptype % nshiptypes])
+			entity_set_low_poly_mesh(e, ship_lp_mesh_map[shiptype % nshiptypes]);
 		if (e)
 			add_ship_thrust_entities(thrust_entity, &nthrust_ports, ecx, e, shiptype, 36,
 						 faction % NTHRUSTMATERIALS);
@@ -2754,6 +2758,8 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 	if (i < 0) {
 		m = id % nstarbase_models;
 		e = add_entity(ecx, starbase_mesh[m], x, y, z, STARBASE_COLOR);
+		if (e && starbase_lp_mesh[m])
+			entity_set_low_poly_mesh(e, starbase_lp_mesh[m]);
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					orientation, OBJTYPE_STARBASE, 1, e);
 		if (i < 0) {
@@ -6972,6 +6978,8 @@ static int process_update_ship_packet(uint8_t opcode)
 		else {
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
+			if (e && ship_lp_mesh_map[shiptype % nshiptypes])
+				entity_set_low_poly_mesh(e, ship_lp_mesh_map[shiptype % nshiptypes]);
 			if (e && !reverse)
 				add_ship_thrust_entities(NULL, NULL, ecx, e, shiptype, 36, 0);
 		}
@@ -11480,6 +11488,9 @@ static void show_weapons_camera_view(void)
 	o->entity = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 				o->x, o->y, o->z, SHIP_COLOR);
 	if (o->entity) {
+		if (ship_lp_mesh_map[o->tsd.ship.shiptype])
+			entity_set_low_poly_mesh(o->entity,
+						 ship_lp_mesh_map[o->tsd.ship.shiptype]);
 		float desired_lights = (float) o->tsd.ship.exterior_lights / 255.0;
 		current_lights += (desired_lights - current_lights) * 0.05;
 		update_entity_orientation(o->entity, &o->orientation);
@@ -28021,6 +28032,15 @@ static void init_meshes(void)
 		printf("reading starbase model %d of %d '%s'\n", i + 1, nstarbase_models, filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
+		if (starbase_mesh[i]) {
+			int target_tris = starbase_mesh[i]->ntriangles / 8;
+
+			if (target_tris < 64)
+				target_tris = 64;
+			starbase_lp_mesh[i] = mesh_simplify(starbase_mesh[i], target_tris);
+			if (starbase_lp_mesh[i])
+				mesh_set_low_poly_pixel_threshold(starbase_lp_mesh[i], 40.0f);
+		}
 	}
 	update_splash_progress(85);
 
@@ -28043,6 +28063,15 @@ static void init_meshes(void)
 			mesh_rotate(ship_mesh_map[i], &q);
 		}
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
+		if (ship_mesh_map[i]) {
+			int target_tris = ship_mesh_map[i]->ntriangles / 8;
+
+			if (target_tris < 64)
+				target_tris = 64;
+			ship_lp_mesh_map[i] = mesh_simplify(ship_mesh_map[i], target_tris);
+			if (ship_lp_mesh_map[i])
+				mesh_set_low_poly_pixel_threshold(ship_lp_mesh_map[i], 40.0f);
+		}
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i], (uint32_t) i + 1);
 	}
 	setup_ship_death();
@@ -28556,12 +28585,14 @@ static void process_options(int argc, char *argv[])
 static void setup_ship_mesh_maps(void)
 {
 	ship_mesh_map = malloc(sizeof(*ship_mesh_map) * nshiptypes);
+	ship_lp_mesh_map = malloc(sizeof(*ship_lp_mesh_map) * nshiptypes);
 	derelict_mesh = malloc(sizeof(*derelict_mesh) * nshiptypes);
-	if (!ship_mesh_map || !derelict_mesh) {
+	if (!ship_mesh_map || !ship_lp_mesh_map || !derelict_mesh) {
 		fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
 		exit(1);
 	}
 	memset(ship_mesh_map, 0, sizeof(*ship_mesh_map) * nshiptypes);
+	memset(ship_lp_mesh_map, 0, sizeof(*ship_lp_mesh_map) * nshiptypes);
 	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
 }
 
@@ -29275,6 +29306,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	starbase_mesh = allocate_starbase_mesh_ptrs(nstarbase_models);
+	starbase_lp_mesh = allocate_starbase_mesh_ptrs(nstarbase_models);
 	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
 							STARBASE_SCALE_FACTOR);
 	maybe_connect_to_lobby();
