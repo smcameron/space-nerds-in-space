@@ -944,19 +944,20 @@ static void draw_screen(void)
 		avg_frame_time /= (float)FRAME_INDEX_MAX;
 
 		sng_set_foreground(WHITE);
-		char stat_buffer[64];
+		char stat_buffer[96];
 		if (avg_frame_rate != 0)
 			snprintf(stat_buffer, sizeof(stat_buffer), "fps %5.2f", 1.0 / avg_frame_rate);
 		else
 			snprintf(stat_buffer, sizeof(stat_buffer), "fps ?????.??");
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
+		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 2, 10);
 		snprintf(stat_buffer, sizeof(stat_buffer), "t %0.2f ms", avg_frame_time * 1000.0);
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
+		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 92, 10);
 		if (target_mesh) {
-			snprintf(stat_buffer, sizeof(stat_buffer), "tris %d (%s)",
-				 target_mesh->ntriangles,
+			snprintf(stat_buffer, sizeof(stat_buffer),
+				 "verts %d tris %d (%s)",
+				 target_mesh->nvertices, target_mesh->ntriangles,
 				 showing_simplified ? "simplified" : "full");
-			sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 185, 10);
+			sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 185, 10);
 		}
 	}
 	if (display_frame_stats > 1)
