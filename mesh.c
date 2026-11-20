@@ -3457,12 +3457,13 @@ static int qem_uv_check_and_update(const struct qem_vtris *vt_u,
 }
 
 /*
- * Simplify a triangle mesh to approximately target_triangles using Quadric
- * Error Metrics (QEM) edge-collapse decimation.  Returns a new mesh; the
- * caller is responsible for freeing it with mesh_free().  Preserves texture
- * coordinates (and UV seams) when present.
+ * Simplify a triangle mesh to approximately target_triangles (clamped to at
+ * least min_tris, and at least 4) using Quadric Error Metrics (QEM)
+ * edge-collapse decimation.  Returns a new mesh; the caller is responsible
+ * for freeing it with mesh_free().  Preserves texture coordinates (and UV
+ * seams) when present.
  */
-struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
+struct mesh *mesh_simplify(struct mesh *m, int target_triangles, int min_tris)
 {
 	struct vertex *wv = NULL;
 	struct texture_coord *wtex = NULL;
@@ -3483,8 +3484,10 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 	    m->ntriangles <= 0 || m->nvertices <= 0)
 		return NULL;
 
-	if (target_triangles < 4)
-		target_triangles = 4;
+	if (min_tris < 4)
+		min_tris = 4;
+	if (target_triangles < min_tris)
+		target_triangles = min_tris;
 	if (m->ntriangles <= target_triangles)
 		return mesh_duplicate(m);
 

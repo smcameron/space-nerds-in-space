@@ -27997,11 +27997,8 @@ static void init_meshes(void)
 		/* printf("asteroid[%d] radius is %f\n", i, asteroid_mesh[i]->radius); */
 
 		if (asteroid_mesh[i]) {
-			int target_tris = asteroid_mesh[i]->ntriangles / 4;
-
-			if (target_tris < 64)
-				target_tris = 64;
-			asteroid_lp_mesh[i] = mesh_simplify(asteroid_mesh[i], target_tris);
+			asteroid_lp_mesh[i] = mesh_simplify(asteroid_mesh[i],
+							    asteroid_mesh[i]->ntriangles / 4, 64);
 			mesh_set_low_poly_pixel_threshold(asteroid_lp_mesh[i], 50.0f);
 		}
 	}
@@ -28035,11 +28032,8 @@ static void init_meshes(void)
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
 		if (starbase_mesh[i]) {
-			int target_tris = starbase_mesh[i]->ntriangles / 8;
-
-			if (target_tris < 64)
-				target_tris = 64;
-			starbase_lp_mesh[i] = mesh_simplify(starbase_mesh[i], target_tris);
+			starbase_lp_mesh[i] = mesh_simplify(starbase_mesh[i],
+							    starbase_mesh[i]->ntriangles / 8, 64);
 			if (starbase_lp_mesh[i])
 				mesh_set_low_poly_pixel_threshold(starbase_lp_mesh[i], 40.0f);
 		}
@@ -28066,11 +28060,8 @@ static void init_meshes(void)
 		}
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
 		if (ship_mesh_map[i]) {
-			int target_tris = ship_mesh_map[i]->ntriangles / 8;
-
-			if (target_tris < 64)
-				target_tris = 64;
-			ship_lp_mesh_map[i] = mesh_simplify(ship_mesh_map[i], target_tris);
+			ship_lp_mesh_map[i] = mesh_simplify(ship_mesh_map[i],
+							    ship_mesh_map[i]->ntriangles / 8, 64);
 			if (ship_lp_mesh_map[i])
 				mesh_set_low_poly_pixel_threshold(ship_lp_mesh_map[i], 40.0f);
 		}

@@ -135,7 +135,7 @@ GLOBAL void mesh_set_name(struct mesh *m, char *name);
 GLOBAL char *mesh_name(struct mesh *m);
 GLOBAL void mesh_set_low_poly_pixel_threshold(struct mesh *m, float pixel_threshold);
 GLOBAL float mesh_get_low_poly_pixel_threshold(const struct mesh *m);
-GLOBAL struct mesh *mesh_simplify(struct mesh *m, int target_triangles);
+GLOBAL struct mesh *mesh_simplify(struct mesh *m, int target_triangles, int min_tris);
 
 #undef GLOBAL
 #endif

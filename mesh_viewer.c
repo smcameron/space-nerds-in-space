@@ -295,17 +295,12 @@ static void take_periodic_snapshot(void)
 
 static void show_simplified_mesh(void)
 {
-	int target_tris;
-
 	if (!target_mesh)
 		return;
 	if (!full_mesh)
 		full_mesh = target_mesh;
 	if (!simplified_mesh) {
-		target_tris = full_mesh->ntriangles / 8;
-		if (target_tris < 64)
-			target_tris = 64;
-		simplified_mesh = mesh_simplify(full_mesh, target_tris);
+		simplified_mesh = mesh_simplify(full_mesh, full_mesh->ntriangles / 8, 64);
 		if (!simplified_mesh)
 			return;
 	}
