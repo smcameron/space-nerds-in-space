@@ -88,10 +88,12 @@ static int trap_nans = 0;
 
 static int display_frame_stats = 1;
 
+#define MAX_SIMPLIFY_LEVELS 4
+static const int simplify_factors[MAX_SIMPLIFY_LEVELS] = { 1, 2, 4, 8 };
 static struct mesh *target_mesh;
 static struct mesh *full_mesh;
-static struct mesh *simplified_mesh;
-static int showing_simplified;
+static struct mesh *simplified_meshes[MAX_SIMPLIFY_LEVELS];
+static int simplify_level;
 static struct mesh *turret_base_mesh;
 static struct mesh *atmosphere_mesh;
 static struct mesh *light_mesh;
@@ -295,35 +297,57 @@ static void take_periodic_snapshot(void)
 
 static void show_simplified_mesh(void)
 {
+	int next_level;
+
 	if (!target_mesh)
 		return;
 	if (!full_mesh)
 		full_mesh = target_mesh;
-	if (!simplified_mesh) {
-		simplified_mesh = mesh_simplify(full_mesh, full_mesh->ntriangles / 8, 64);
-		if (!simplified_mesh)
+	if (simplify_level >= MAX_SIMPLIFY_LEVELS - 1)
+		return;
+	next_level = simplify_level + 1;
+	if (!simplified_meshes[next_level]) {
+		simplified_meshes[next_level] = mesh_simplify(full_mesh,
+			full_mesh->ntriangles / simplify_factors[next_level], 64);
+		if (!simplified_meshes[next_level])
 			return;
 	}
-	target_mesh = simplified_mesh;
-	showing_simplified = 1;
+	simplify_level = next_level;
+	target_mesh = simplified_meshes[simplify_level];
 }
 
 static void show_full_mesh(void)
 {
 	if (full_mesh)
 		target_mesh = full_mesh;
-	showing_simplified = 0;
+	simplify_level = 0;
+}
+
+static void show_less_simplified_mesh(void)
+{
+	if (simplify_level <= 0)
+		return;
+	simplify_level--;
+	if (simplify_level == 0) {
+		if (full_mesh)
+			target_mesh = full_mesh;
+	} else if (simplified_meshes[simplify_level]) {
+		target_mesh = simplified_meshes[simplify_level];
+	}
 }
 
 static void distort_the_mesh(int distort)
 {
 	static struct mesh *undistorted = NULL;
 	static struct osn_context *osn = NULL;
+	int i;
 
 	show_full_mesh();
-	if (simplified_mesh) {
-		mesh_free(simplified_mesh);
-		simplified_mesh = NULL;
+	for (i = 1; i < MAX_SIMPLIFY_LEVELS; i++) {
+		if (simplified_meshes[i]) {
+			mesh_free(simplified_meshes[i]);
+			simplified_meshes[i] = NULL;
+		}
 	}
 
 	if (!osn)
@@ -430,7 +454,7 @@ static void handle_key_down(SDL_Keysym *keysym)
 		}
 		break;
 	case SDLK_SEMICOLON:
-		show_full_mesh();
+		show_less_simplified_mesh();
 		break;
 	case SDLK_QUOTE:
 		show_simplified_mesh();
@@ -952,10 +976,16 @@ static void draw_screen(void)
 		snprintf(stat_buffer, sizeof(stat_buffer), "t %0.2f ms", avg_frame_time * 1000.0);
 		sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 200, 25);
 		if (target_mesh) {
-			snprintf(stat_buffer, sizeof(stat_buffer),
-				 "verts %d tris %d (%s)",
-				 target_mesh->nvertices, target_mesh->ntriangles,
-				 showing_simplified ? "simplified" : "full");
+			if (simplify_level == 0)
+				snprintf(stat_buffer, sizeof(stat_buffer),
+					 "verts %d tris %d (full, decimation 1)",
+					 target_mesh->nvertices, target_mesh->ntriangles);
+			else
+				snprintf(stat_buffer, sizeof(stat_buffer),
+					 "verts %d tris %d (1/%d, decimation %d)",
+					 target_mesh->nvertices, target_mesh->ntriangles,
+					 simplify_factors[simplify_level],
+					 simplify_factors[simplify_level]);
 			sng_abs_xy_draw_string(stat_buffer, SMALL_FONT, 450, 25);
 		}
 	}
