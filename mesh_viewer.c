@@ -154,6 +154,7 @@ static int turret_mode = 0;
 static int no_skybox = 0;
 static int warpgate_mode = 0;
 static int black_and_white = 0;
+static int multi_instance = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
 static int reload_shaders = 0;
@@ -196,6 +197,7 @@ static char *help_text =
 	"  - f TOGGLE PERIODIC SNAPSHOTS\n"
 	"  - s TOGGLE AUTO-SPIN MODE\n"
 	"  - n TURN AUTO_SPIN ON FOR 10 FRAMES\n"
+	"  - m TOGGLE MULTI-INSTANCE MODE\n"
 	"  - + SPEED UP RATE OF SPIN\n"
 	"  - - SLOW DOWN RATE OF SPIN\n\n"
 	"  THE VECTOR AT THE BOTTOM OF THE SCREEN IS FROM THE CENTER OF\n"
@@ -407,6 +409,9 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_s:
 		autospin = !autospin;
+		break;
+	case SDLK_m:
+		multi_instance = !multi_instance;
 		break;
 	case SDLK_a:
 		draw_atmosphere = !draw_atmosphere;
@@ -853,8 +858,9 @@ static void draw_screen(void)
 	}
 	float r = target_mesh->radius / tan(FOV / 3.0); /* 50% size for middle zoom */
 	float r_cam = r * lobby_zoom / 255.0;
-	
-	camera_set_parameters(cx, 0.1f, r * 2.2, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
+	float far_clip = multi_instance ? r * 20.0f : r * 2.2f;
+
+	camera_set_parameters(cx, 0.1f, far_clip, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
 	camera_set_pos(cx, r_cam, 0, 0);
 	camera_look_at(cx, 0, 0, 0);
 	camera_assign_up_direction(cx, 0, 1, 0);
@@ -865,42 +871,13 @@ static void draw_screen(void)
 
 	calculate_camera_transform(cx);
 
-	struct entity *e = add_entity(cx, target_mesh,
-				      exhaust_mode ? (9.0f * exhaust_throttle) : 0, 0, 0, WHITE);
-	struct entity *turret_base_entity = NULL;
-	struct entity *ae = NULL;
-	if (planet_mode) {
-		update_entity_material(e, &planet_material);
-		if (draw_atmosphere) {
-			ae = add_entity(cx, atmosphere_mesh, 0, 0, 0, WHITE);
-			update_entity_scale(ae, 1.03);
-			update_entity_material(ae, &atmosphere_material);
-		}
-	} else if (cubemap_mode) {
-		update_entity_material(e, &planet_material);
-	} else if (burst_rod_mode) {
-		update_entity_material(e, &green_phaser_material);
-	} else if (thrust_mode) {
-		update_entity_material(e, &thrust_material);
-	} else if (exhaust_mode) {
+	if (exhaust_mode) {
 		exhaust_material.exhaust_plume.noise_seed = snis_random_float();
 		exhaust_material.exhaust_plume.plume_length = clampf(exhaust_throttle, 0.1f, 1.0f);
-		update_entity_material(e, &exhaust_material);
-		update_entity_non_uniform_scale(e, exhaust_throttle, 1.0f, 1.0f);
-	} else if (cylinder_albedo) {
-		update_entity_material(e, &cyl_albedo);
-	} else if (diffusename) {
-		update_entity_material(e, &diffuse_material);
-	} else if (use_alpha_by_normal) {
-		update_entity_material(e, &alpha_by_normal);
 	} else if (warpgate_mode) {
-		update_entity_material(e, &warpgate_effect_material);
-		update_entity_scale(e, 1.0);
 		scroll_warpgate_texture();
 	}
-	if (!turret_mode) {
-		update_entity_orientation(e, &lobby_orientation);
-	} else {
+	if (turret_mode) {
 		union quat new_turret_orientation, new_turret_base_orientation;
 		union vec3 aim = { { 1.0, 0.0, 0.0 } };
 		struct turret_params tparams;
@@ -924,9 +901,59 @@ static void draw_screen(void)
 
 		turret_orientation = new_turret_orientation;
 		turret_base_orientation = new_turret_base_orientation;
-		turret_base_entity = add_entity(cx, turret_base_mesh, 0, 0, 0, WHITE);
-		update_entity_orientation(e, &turret_orientation);
-		update_entity_orientation(turret_base_entity, &turret_base_orientation);
+	}
+
+	/*
+	 * In multi-instance mode, place 5 instances at distances r_cam * 2^i
+	 * (screen sizes 1, 1/2, 1/4, 1/8, 1/16) and shift each additional
+	 * instance to the right (-Z in camera space).
+	 */
+	int n_instances = multi_instance ? 5 : 1;
+	float ang_sum = 0.0f;
+	struct entity *e;
+	for (int i = 0; i < n_instances; i++) {
+		float scale_factor = (float)(1 << i);
+		float x = r_cam * (1.0f - scale_factor) + (exhaust_mode ? (9.0f * exhaust_throttle) : 0.0f);
+		if (i > 0)
+			ang_sum += 1.35f / (float)(1 << (i - 1));
+		float z = -ang_sum * target_mesh->radius * scale_factor;
+
+		e = add_entity(cx, target_mesh, x, 0, z, WHITE);
+		struct entity *turret_base_entity = NULL;
+		struct entity *ae = NULL;
+		if (planet_mode) {
+			update_entity_material(e, &planet_material);
+			if (draw_atmosphere) {
+				ae = add_entity(cx, atmosphere_mesh, x, 0, z, WHITE);
+				update_entity_scale(ae, 1.03);
+				update_entity_material(ae, &atmosphere_material);
+			}
+		} else if (cubemap_mode) {
+			update_entity_material(e, &planet_material);
+		} else if (burst_rod_mode) {
+			update_entity_material(e, &green_phaser_material);
+		} else if (thrust_mode) {
+			update_entity_material(e, &thrust_material);
+		} else if (exhaust_mode) {
+			update_entity_material(e, &exhaust_material);
+			update_entity_non_uniform_scale(e, exhaust_throttle, 1.0f, 1.0f);
+		} else if (cylinder_albedo) {
+			update_entity_material(e, &cyl_albedo);
+		} else if (diffusename) {
+			update_entity_material(e, &diffuse_material);
+		} else if (use_alpha_by_normal) {
+			update_entity_material(e, &alpha_by_normal);
+		} else if (warpgate_mode) {
+			update_entity_material(e, &warpgate_effect_material);
+			update_entity_scale(e, 1.0);
+		}
+		if (!turret_mode) {
+			update_entity_orientation(e, &lobby_orientation);
+		} else {
+			turret_base_entity = add_entity(cx, turret_base_mesh, x, 0, z, WHITE);
+			update_entity_orientation(e, &turret_orientation);
+			update_entity_orientation(turret_base_entity, &turret_base_orientation);
+		}
 	}
 
 	if (isDraggingLight) {
@@ -1105,6 +1132,7 @@ __attribute__((noreturn)) void usage(char *program_name)
 	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program_name);
 	fprintf(stderr, " %s --warpgate\n", program_name);
 	fprintf(stderr, "             (emittance requires --cylindrical to be set)\n");
+	fprintf(stderr, "           [ -M | --multi ] (show 5 instances at 1, 1/2, 1/4, 1/8, 1/16 size)\n");
 	exit(-1);
 }
 
@@ -1145,6 +1173,7 @@ static struct option long_options[] = {
 	{ "replacement-assets", required_argument, NULL, 'r' },
 	{ "warpgate", no_argument, NULL, 'w' },
 	{ "no-skybox", no_argument, NULL, 'K' },
+	{ "multi", no_argument, NULL, 'M' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -1155,7 +1184,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "E::IAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
+		c = getopt_long(argc, argv, "E::IAB:T:bc:d:fC:KMY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -1175,6 +1204,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'K':
 			no_skybox = 1;
+			break;
+		case 'M':
+			multi_instance = 1;
 			break;
 		case 'T':
 			turret_mode = 1;

@@ -2,7 +2,7 @@
 .SH NAME
 mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .SH SYNOPSIS
-.B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ] [ -s skybox-prefix ]
+.B mesh_viewer [ -p ] filename [ -n normalmap-prefix ] [ -c cubemap-texture-prefix ] [ -s skybox-prefix ] [ -M | --multi ]
 .br
 .B mesh_viewer -T turret-model -B turret-base-model
 .br
@@ -50,6 +50,13 @@ the plume color: \fBblue\fR (default), \fBorange\fR, \fBgreen\fR, \fBgold\fR,
 \fBpurple\fR, \fBred\fR, or \fBwhite\fR. Alternatively, a numeric index from
 0 to 6 may be provided. No model file is required in this mode.
 .TP
+\fB-M, --multi\fR
+Show five instances of the model at once: the normal instance at standard
+distance, plus four additional instances farther from the camera and shifted
+progressively to the right so that each additional instance appears at 1/2,
+1/4, 1/8, and 1/16 the screen size of the first. This is useful for inspecting
+how a model looks at different distances.
+.TP
 \fB-T, --turret\fR turret-model
 Set "turret-mode" and specify the model for the turret.
 In "turret mode", two models are required, the turret, and the turret
@@ -92,6 +99,8 @@ Use the mouse wheel to zoom in and out on the model.
 The 'a' key toggles atmosphere rendering on and off (planet mode only).
 .TP
 The 'f' key toggles periodic snapshotting to files named 'mesh-viewer-snapshot-xxxxx.png'.
+.TP
+The 'm' key toggles multi-instance mode (equivalent to \fB-M\fR / \fB--multi\fR).
 .TP
 The 'n' key enables autospin for 10 frames of animation then turns it off.  This is useful for capturing screenshots from which to create animated gifs.
 .TP
