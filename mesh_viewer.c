@@ -89,6 +89,9 @@ static int trap_nans = 0;
 static int display_frame_stats = 1;
 
 static struct mesh *target_mesh;
+static struct mesh *full_mesh;
+static struct mesh *simplified_mesh;
+static int showing_simplified;
 static struct mesh *turret_base_mesh;
 static struct mesh *atmosphere_mesh;
 static struct mesh *light_mesh;
@@ -185,8 +188,8 @@ static char *help_text =
 	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n"
 	"  * ESC TO EXIT VIEWER\n"
 	"  - a TOGGLE ATMOSPHERE RENDERING (PLANET MODE ONLY)\n"
-	"  - ] MAKE ATMOSPHERE BRIGHTER\n"
-	"  - [ MAKE ATMOSPHERE DIMMER\n"
+	"  - ] MAKE ATMOSPHERE BRIGHTER / SHOW SIMPLIFIED MODEL\n"
+	"  - [ MAKE ATMOSPHERE DIMMER / SHOW FULL MODEL\n"
 	"  - p TAKE A SNAPSHOT\n"
 	"  - f TOGGLE PERIODIC SNAPSHOTS\n"
 	"  - s TOGGLE AUTO-SPIN MODE\n"
@@ -290,10 +293,43 @@ static void take_periodic_snapshot(void)
 	take_snapshot();
 }
 
+static void show_simplified_mesh(void)
+{
+	int target_tris;
+
+	if (!target_mesh)
+		return;
+	if (!full_mesh)
+		full_mesh = target_mesh;
+	if (!simplified_mesh) {
+		target_tris = full_mesh->ntriangles / 8;
+		if (target_tris < 64)
+			target_tris = 64;
+		simplified_mesh = mesh_simplify(full_mesh, target_tris);
+		if (!simplified_mesh)
+			return;
+	}
+	target_mesh = simplified_mesh;
+	showing_simplified = 1;
+}
+
+static void show_full_mesh(void)
+{
+	if (full_mesh)
+		target_mesh = full_mesh;
+	showing_simplified = 0;
+}
+
 static void distort_the_mesh(int distort)
 {
 	static struct mesh *undistorted = NULL;
 	static struct osn_context *osn = NULL;
+
+	show_full_mesh();
+	if (simplified_mesh) {
+		mesh_free(simplified_mesh);
+		simplified_mesh = NULL;
+	}
 
 	if (!osn)
 		open_simplex_noise(7737422399LL, &osn);
@@ -308,6 +344,7 @@ static void distort_the_mesh(int distort)
 		mesh_distort(target_mesh, 0.25, osn);
 	mesh_set_average_vertex_normals(target_mesh);
 	mesh_graph_dev_init(target_mesh);
+	full_mesh = target_mesh;
 }
 
 static void adjust_fov(float factor)
@@ -376,9 +413,13 @@ static void handle_key_down(SDL_Keysym *keysym)
 				exhaust_throttle = 0.1f;
 			break;
 		}
-		atmosphere_brightness -= 0.05;
-		if (atmosphere_brightness < 0.0)
-			atmosphere_brightness = 0.0;
+		if (planet_mode) {
+			atmosphere_brightness -= 0.05;
+			if (atmosphere_brightness < 0.0)
+				atmosphere_brightness = 0.0;
+			break;
+		}
+		show_full_mesh();
 		break;
 	case SDLK_RIGHTBRACKET:
 		if (exhaust_mode) {
@@ -387,9 +428,13 @@ static void handle_key_down(SDL_Keysym *keysym)
 				exhaust_throttle = 3.0f;
 			break;
 		}
-		atmosphere_brightness += 0.05;
-		if (atmosphere_brightness > 1.0)
-			atmosphere_brightness = 1.0;
+		if (planet_mode) {
+			atmosphere_brightness += 0.05;
+			if (atmosphere_brightness > 1.0)
+				atmosphere_brightness = 1.0;
+			break;
+		}
+		show_simplified_mesh();
 		break;
 	case SDLK_t:
 		if (exhaust_mode) {
@@ -899,7 +944,7 @@ static void draw_screen(void)
 		avg_frame_time /= (float)FRAME_INDEX_MAX;
 
 		sng_set_foreground(WHITE);
-		char stat_buffer[30];
+		char stat_buffer[64];
 		if (avg_frame_rate != 0)
 			snprintf(stat_buffer, sizeof(stat_buffer), "fps %5.2f", 1.0 / avg_frame_rate);
 		else
@@ -907,6 +952,12 @@ static void draw_screen(void)
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
 		snprintf(stat_buffer, sizeof(stat_buffer), "t %0.2f ms", avg_frame_time * 1000.0);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
+		if (target_mesh) {
+			snprintf(stat_buffer, sizeof(stat_buffer), "tris %d (%s)",
+				 target_mesh->ntriangles,
+				 showing_simplified ? "simplified" : "full");
+			sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 185, 10);
+		}
 	}
 	if (display_frame_stats > 1)
 		graph_dev_display_debug_menu_show();
