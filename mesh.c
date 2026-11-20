@@ -3020,6 +3020,7 @@ struct qem_vtris {
 
 struct qem_edge_pair {
 	int a, b;
+	int tri;
 };
 
 static void qem_add_plane(struct qem_quadric *dst, double a, double b,
@@ -3277,15 +3278,194 @@ static int qem_push_edge(struct qem_heap *heap, const struct qem_quadric *quads,
 	return qem_heap_push(heap, &node);
 }
 
+static int qem_uv_match(const struct texture_coord *a,
+			const struct texture_coord *b)
+{
+	return fabsf(a->u - b->u) < 1e-5f && fabsf(a->v - b->v) < 1e-5f;
+}
+
+static int qem_tri_corner(const int *tv, int ti, int v)
+{
+	int k;
+
+	for (k = 0; k < 3; k++) {
+		if (tv[ti * 3 + k] == v)
+			return k;
+	}
+	return -1;
+}
+
+static void qem_interp_uv(int tc, const int *tv, const struct vertex *wv,
+			const struct texture_coord *wtex, int u, int v,
+			double px, double py, double pz,
+			struct texture_coord *out_uv)
+{
+	int i0 = tv[tc * 3 + 0];
+	int i1 = tv[tc * 3 + 1];
+	int i2 = tv[tc * 3 + 2];
+	double v0x = wv[i1].x - wv[i0].x;
+	double v0y = wv[i1].y - wv[i0].y;
+	double v0z = wv[i1].z - wv[i0].z;
+	double v1x = wv[i2].x - wv[i0].x;
+	double v1y = wv[i2].y - wv[i0].y;
+	double v1z = wv[i2].z - wv[i0].z;
+	double v2x = px - wv[i0].x;
+	double v2y = py - wv[i0].y;
+	double v2z = pz - wv[i0].z;
+	double d00 = v0x * v0x + v0y * v0y + v0z * v0z;
+	double d01 = v0x * v1x + v0y * v1y + v0z * v1z;
+	double d11 = v1x * v1x + v1y * v1y + v1z * v1z;
+	double d20 = v2x * v0x + v2y * v0y + v2z * v0z;
+	double d21 = v2x * v1x + v2y * v1y + v2z * v1z;
+	double denom = d00 * d11 - d01 * d01;
+	int ku, kv;
+	double dx, dy, dz, len2, t;
+
+	if (fabs(denom) > 1e-12) {
+		double b1 = (d11 * d20 - d01 * d21) / denom;
+		double b2 = (d00 * d21 - d01 * d20) / denom;
+		double b0 = 1.0 - b1 - b2;
+
+		if (b0 >= -1.0 && b0 <= 2.0 &&
+		    b1 >= -1.0 && b1 <= 2.0 &&
+		    b2 >= -1.0 && b2 <= 2.0) {
+			const struct texture_coord *t0 = &wtex[tc * 3 + 0];
+			const struct texture_coord *t1 = &wtex[tc * 3 + 1];
+			const struct texture_coord *t2 = &wtex[tc * 3 + 2];
+
+			out_uv->u = (float)(b0 * t0->u + b1 * t1->u + b2 * t2->u);
+			out_uv->v = (float)(b0 * t0->v + b1 * t1->v + b2 * t2->v);
+			return;
+		}
+	}
+
+	ku = qem_tri_corner(tv, tc, u);
+	kv = qem_tri_corner(tv, tc, v);
+	dx = (double)wv[v].x - (double)wv[u].x;
+	dy = (double)wv[v].y - (double)wv[u].y;
+	dz = (double)wv[v].z - (double)wv[u].z;
+	len2 = dx * dx + dy * dy + dz * dz;
+	t = 0.0;
+	if (len2 > 1e-24) {
+		t = ((px - wv[u].x) * dx + (py - wv[u].y) * dy +
+		     (pz - wv[u].z) * dz) / len2;
+		if (t < 0.0)
+			t = 0.0;
+		else if (t > 1.0)
+			t = 1.0;
+	}
+	out_uv->u = (float)((1.0 - t) * wtex[tc * 3 + ku].u +
+			    t * wtex[tc * 3 + kv].u);
+	out_uv->v = (float)((1.0 - t) * wtex[tc * 3 + ku].v +
+			    t * wtex[tc * 3 + kv].v);
+}
+
+static int qem_find_matching_collapsed_tri(const struct qem_vtris *vt_v,
+					const unsigned char *t_deleted,
+					const int *tv,
+					const struct texture_coord *wtex,
+					int u, int match_v,
+					const struct texture_coord *uv)
+{
+	int i;
+
+	for (i = 0; i < vt_v->count; i++) {
+		int tc = vt_v->t[i];
+		int ku, km;
+
+		if (t_deleted[tc])
+			continue;
+		ku = qem_tri_corner(tv, tc, u);
+		if (ku < 0)
+			continue;
+		km = qem_tri_corner(tv, tc, match_v);
+		if (km < 0)
+			continue;
+		if (qem_uv_match(&wtex[tc * 3 + km], uv))
+			return tc;
+	}
+	return -1;
+}
+
+static int qem_uv_check_and_update(const struct qem_vtris *vt_u,
+				const struct qem_vtris *vt_v,
+				const unsigned char *t_deleted,
+				const int *tv, const struct vertex *wv,
+				struct texture_coord *wtex,
+				int u, int v,
+				double px, double py, double pz)
+{
+	int i;
+
+	for (i = 0; i < vt_u->count; i++) {
+		int ti = vt_u->t[i];
+		int ku;
+
+		if (t_deleted[ti] || qem_tri_corner(tv, ti, v) >= 0)
+			continue;
+		ku = qem_tri_corner(tv, ti, u);
+		if (qem_find_matching_collapsed_tri(vt_v, t_deleted, tv,
+						wtex, u, u,
+						&wtex[ti * 3 + ku]) < 0)
+			return 0;
+	}
+
+	for (i = 0; i < vt_v->count; i++) {
+		int ti = vt_v->t[i];
+		int kv;
+
+		if (t_deleted[ti] || qem_tri_corner(tv, ti, u) >= 0)
+			continue;
+		kv = qem_tri_corner(tv, ti, v);
+		if (qem_find_matching_collapsed_tri(vt_v, t_deleted, tv,
+						wtex, u, v,
+						&wtex[ti * 3 + kv]) < 0)
+			return 0;
+	}
+
+	for (i = 0; i < vt_u->count; i++) {
+		int ti = vt_u->t[i];
+		int ku, tc;
+		struct texture_coord new_uv;
+
+		if (t_deleted[ti] || qem_tri_corner(tv, ti, v) >= 0)
+			continue;
+		ku = qem_tri_corner(tv, ti, u);
+		tc = qem_find_matching_collapsed_tri(vt_v, t_deleted, tv,
+						wtex, u, u,
+						&wtex[ti * 3 + ku]);
+		qem_interp_uv(tc, tv, wv, wtex, u, v, px, py, pz, &new_uv);
+		wtex[ti * 3 + ku] = new_uv;
+	}
+
+	for (i = 0; i < vt_v->count; i++) {
+		int ti = vt_v->t[i];
+		int kv, tc;
+		struct texture_coord new_uv;
+
+		if (t_deleted[ti] || qem_tri_corner(tv, ti, u) >= 0)
+			continue;
+		kv = qem_tri_corner(tv, ti, v);
+		tc = qem_find_matching_collapsed_tri(vt_v, t_deleted, tv,
+						wtex, u, v,
+						&wtex[ti * 3 + kv]);
+		qem_interp_uv(tc, tv, wv, wtex, u, v, px, py, pz, &new_uv);
+		wtex[ti * 3 + kv] = new_uv;
+	}
+
+	return 1;
+}
+
 /*
  * Simplify a triangle mesh to approximately target_triangles using Quadric
  * Error Metrics (QEM) edge-collapse decimation.  Returns a new mesh; the
- * caller is responsible for freeing it with mesh_free().  Texture coordinates
- * are not preserved.
+ * caller is responsible for freeing it with mesh_free().  Preserves texture
+ * coordinates (and UV seams) when present.
  */
 struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 {
 	struct vertex *wv = NULL;
+	struct texture_coord *wtex = NULL;
 	struct qem_quadric *quads = NULL;
 	struct qem_vtris *vtris = NULL;
 	struct qem_edge_pair *edges = NULL;
@@ -3313,6 +3493,8 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 	active_tris = nt;
 
 	wv = malloc(sizeof(*wv) * nv);
+	if (m->tex)
+		wtex = malloc(sizeof(*wtex) * nt * 3);
 	quads = calloc(nv, sizeof(*quads));
 	vtris = calloc(nv, sizeof(*vtris));
 	v_deleted = calloc(nv, sizeof(*v_deleted));
@@ -3321,11 +3503,13 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 	tv = malloc(sizeof(*tv) * nt * 3);
 	edges = malloc(sizeof(*edges) * nt * 3);
 	v_remap = malloc(sizeof(*v_remap) * nv);
-	if (!wv || !quads || !vtris || !v_deleted || !t_deleted ||
-	    !v_epoch || !tv || !edges || !v_remap)
+	if (!wv || (m->tex && !wtex) || !quads || !vtris || !v_deleted ||
+	    !t_deleted || !v_epoch || !tv || !edges || !v_remap)
 		goto cleanup;
 
 	memcpy(wv, m->v, sizeof(*wv) * nv);
+	if (wtex)
+		memcpy(wtex, m->tex, sizeof(*wtex) * nt * 3);
 
 	for (i = 0; i < nt; i++) {
 		double p[3][3], n[3], len, d;
@@ -3362,12 +3546,60 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 			if (a != b) {
 				edges[nedges].a = a < b ? a : b;
 				edges[nedges].b = a < b ? b : a;
+				edges[nedges].tri = i;
 				nedges++;
 			}
 		}
 	}
 
 	qsort(edges, nedges, sizeof(*edges), qem_edge_pair_cmp);
+	for (i = 0; i < nedges; i++) {
+		int is_boundary;
+
+		if (i > 0 && edges[i].a == edges[i - 1].a &&
+		    edges[i].b == edges[i - 1].b)
+			continue;
+		is_boundary = (i + 1 == nedges ||
+			       edges[i].a != edges[i + 1].a ||
+			       edges[i].b != edges[i + 1].b);
+		if (is_boundary) {
+			int ti = edges[i].tri;
+			int a = edges[i].a;
+			int b = edges[i].b;
+			double p0[3], p1[3], p2[3], tn[3], ex, ey, ez;
+			double bx, by, bz, blen;
+
+			p0[0] = wv[tv[ti * 3 + 0]].x;
+			p0[1] = wv[tv[ti * 3 + 0]].y;
+			p0[2] = wv[tv[ti * 3 + 0]].z;
+			p1[0] = wv[tv[ti * 3 + 1]].x;
+			p1[1] = wv[tv[ti * 3 + 1]].y;
+			p1[2] = wv[tv[ti * 3 + 1]].z;
+			p2[0] = wv[tv[ti * 3 + 2]].x;
+			p2[1] = wv[tv[ti * 3 + 2]].y;
+			p2[2] = wv[tv[ti * 3 + 2]].z;
+			qem_tri_normal(p0, p1, p2, tn);
+			ex = wv[b].x - wv[a].x;
+			ey = wv[b].y - wv[a].y;
+			ez = wv[b].z - wv[a].z;
+			bx = ey * tn[2] - ez * tn[1];
+			by = ez * tn[0] - ex * tn[2];
+			bz = ex * tn[1] - ey * tn[0];
+			blen = sqrt(bx * bx + by * by + bz * bz);
+			if (blen > 1e-12) {
+				double w = 2.0;
+				double d;
+
+				bx = (bx / blen) * w;
+				by = (by / blen) * w;
+				bz = (bz / blen) * w;
+				d = -(bx * wv[a].x + by * wv[a].y +
+				      bz * wv[a].z);
+				qem_add_plane(&quads[a], bx, by, bz, d);
+				qem_add_plane(&quads[b], bx, by, bz, d);
+			}
+		}
+	}
 	for (i = 0; i < nedges; i++) {
 		if (i > 0 && edges[i].a == edges[i - 1].a &&
 		    edges[i].b == edges[i - 1].b)
@@ -3394,6 +3626,10 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 			continue;
 		if (!qem_check_tris_no_flip(&vtris[v], t_deleted, tv, wv,
 					v, u, node.x, node.y, node.z))
+			continue;
+		if (wtex && !qem_uv_check_and_update(&vtris[u], &vtris[v],
+					t_deleted, tv, wv, wtex, u, v,
+					node.x, node.y, node.z))
 			continue;
 
 		wv[u].x = (float) node.x;
@@ -3456,7 +3692,7 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 	if (out_nv <= 0 || out_nt <= 0)
 		goto cleanup;
 
-	out = allocate_mesh_for_copy(out_nt, out_nv, 0, 0);
+	out = allocate_mesh_for_copy(out_nt, out_nv, 0, m->tex != NULL);
 	if (!out)
 		goto cleanup;
 	out->geometry_mode = MESH_GEOMETRY_TRIANGLES;
@@ -3474,6 +3710,11 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 		out->t[k].v[0] = &out->v[v_remap[tv[i * 3 + 0]]];
 		out->t[k].v[1] = &out->v[v_remap[tv[i * 3 + 1]]];
 		out->t[k].v[2] = &out->v[v_remap[tv[i * 3 + 2]]];
+		if (out->tex) {
+			out->tex[k * 3 + 0] = wtex[i * 3 + 0];
+			out->tex[k * 3 + 1] = wtex[i * 3 + 1];
+			out->tex[k * 3 + 2] = wtex[i * 3 + 2];
+		}
 		k++;
 	}
 
@@ -3484,11 +3725,14 @@ struct mesh *mesh_simplify(struct mesh *m, int target_triangles)
 	}
 	snprintf(out->name, sizeof(out->name), "%s (simplified)", m->name);
 	mesh_set_average_vertex_normals(out);
+	if (out->tex)
+		mesh_set_mikktspace_tangents_and_bitangents(out);
 	out->radius = mesh_compute_radius(out);
 	mesh_graph_dev_init(out);
 
 cleanup:
 	free(wv);
+	free(wtex);
 	free(quads);
 	if (vtris) {
 		for (i = 0; i < nv; i++)
